@@ -503,14 +503,69 @@ class LiveZulipBinding extends ZulipBinding {
       token: token,
       configOverrides: {
         'subject': ?subject,
+        'startWithAudioMuted': false,
+        'startWithVideoMuted': true,
       },
       featureFlags: {
         'unsaferoomwarning.enabled': false,
         'prejoinpage.enabled': false,
+        // Android's self-managed Telecom integration routinely leaves the mic
+        // muted at the OS level, so the in-call unmute button does nothing.
+        // Consort calls aren't system calls, so we don't need the integration.
+        //   https://github.com/jitsi/jitsi-meet/issues/10695
+        'call-integration.enabled': false,
       },
     );
-    await JitsiMeet().join(options);
+    _jitsiAudioMuted = false;
+    _jitsiVideoMuted = true;
+    await JitsiMeet().join(options, _jitsiListener());
   }
+
+  /// Our mute state in the current call.
+  ///
+  /// Consort's Jitsi build replaces the toolbar's mic and camera controls with
+  /// custom buttons.  A custom button only reports that it was pressed;
+  /// carrying out the action is left to us, so we track the state to toggle.
+  ///
+  /// These are initialized in [joinJitsiCall] to match the `startWith*Muted`
+  /// config it passes.
+  bool _jitsiAudioMuted = false;
+  bool _jitsiVideoMuted = true;
+
+  JitsiMeetEventListener _jitsiListener() => JitsiMeetEventListener(
+    conferenceWillJoin: (String url) {
+      assert(debugLog('jitsi: will join $url'));
+    },
+    conferenceJoined: (String url) {
+      assert(debugLog('jitsi: joined $url'));
+    },
+    conferenceTerminated: (String url, Object? error) {
+      assert(debugLog('jitsi: terminated $url; error: $error'));
+    },
+    audioMutedChanged: (bool muted) {
+      _jitsiAudioMuted = muted;
+      assert(debugLog('jitsi: audio muted: $muted'));
+    },
+    videoMutedChanged: (bool muted) {
+      // Deliberately not syncing [_jitsiVideoMuted] from this.  For video the
+      // native event carries Jitsi's mute-authority bitmask (0 none, 1 low
+      // bandwidth, 2 background, 4 user) as a string, and the plugin parses it
+      // with a helper that reads any string but 'true' as false -- so `muted`
+      // here is false even while video is muted.  Audio's is a real bool.
+      assert(debugLog('jitsi: video muted: $muted'));
+    },
+    customButtonPressed: (String buttonId) {
+      assert(debugLog('jitsi: custom button: $buttonId'));
+      switch (buttonId) {
+        case 'microphone':
+          _jitsiAudioMuted = !_jitsiAudioMuted;
+          unawaited(JitsiMeet().setAudioMuted(_jitsiAudioMuted));
+        case 'camera':
+          _jitsiVideoMuted = !_jitsiVideoMuted;
+          unawaited(JitsiMeet().setVideoMuted(_jitsiVideoMuted));
+      }
+    },
+  );
 
   @override
   Future<bool> supportsCloseForLaunchMode(url_launcher.LaunchMode mode) async {
