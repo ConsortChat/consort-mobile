@@ -1,0 +1,852 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+
+import 'color.dart';
+import 'icons.dart';
+import 'text.dart';
+import 'theme.dart';
+
+/// The "Button" component from Zulip Web UI kit,
+/// plus outer vertical padding to make the touch target 44px tall.
+///
+/// The Figma uses this for the "Cancel" and "Save" buttons in the compose box
+/// for editing an already-sent message.
+///
+/// Pass null for [onPressed] to make the button disabled.
+/// The disabled state is essentially 50% opacity;
+/// this isn't specified in the Figma, but Vlad suggested it informally:
+///   https://chat.zulip.org/#narrow/channel/530-mobile-design/topic/toggle.3A.20disabled.20state/near/2250883
+/// and empirically web seems to do this too.
+///
+/// See Figma:
+///   * Component: https://www.figma.com/design/msWyAJ8cnMHgOMPxi7BUvA/Zulip-Web-UI-kit?node-id=1-2780&t=Wia0D0i1I0GXdD9z-0
+///   * Edit-message compose box: https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=3988-38201&m=dev
+class ZulipWebUiKitButton extends StatelessWidget {
+  const ZulipWebUiKitButton({
+    super.key,
+    this.attention = ZulipWebUiKitButtonAttention.medium,
+    this.intent = ZulipWebUiKitButtonIntent.info,
+    this.size = ZulipWebUiKitButtonSize.normal,
+    required this.label,
+    this.icon,
+    required this.onPressed,
+  });
+
+  final ZulipWebUiKitButtonAttention attention;
+  final ZulipWebUiKitButtonIntent intent;
+  final ZulipWebUiKitButtonSize size;
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+
+  /// The background color when the button is at rest (not pressed).
+  ///
+  /// When adding a case here,
+  /// update [_backgroundColorActive] and [_labelColor] too.
+  static Color _backgroundColorNormal(DesignVariables designVariables, {
+    required ZulipWebUiKitButtonAttention attention,
+    required ZulipWebUiKitButtonIntent intent,
+  }) {
+    switch ((attention, intent)) {
+      case (.minimal, .neutral):
+        return Colors.transparent;
+      case (.low,     .neutral):
+        return Colors.transparent;
+      case (.medium,  .neutral):
+      case (.high,    .neutral):
+      case (.minimal, .warning):
+      case (.low,     .warning):
+        throw UnimplementedError();
+      case (.medium,  .warning):
+        return designVariables.btnBgAttMediumIntWarningNormal;
+      case (.high,    .warning):
+        return designVariables.btnBgAttHighIntWarningNormal;
+      case (.minimal, .danger):
+        throw UnimplementedError();
+      case (.low,     .danger):
+        return Colors.transparent;
+      case (.medium,  .danger):
+        return designVariables.btnBgAttMediumIntDangerNormal;
+      case (.high,    .danger):
+      case (.minimal, .info):
+        throw UnimplementedError();
+      case (.low,     .info):
+        return Colors.transparent;
+      case (.medium,  .info):
+        return designVariables.btnBgAttMediumIntInfoNormal;
+      case (.high,    .info):
+        return designVariables.btnBgAttHighIntInfoNormal;
+    }
+  }
+
+  /// The background color when the button is pressed.
+  ///
+  /// When adding a case here,
+  /// update [_backgroundColorNormal] and [_labelColor] too.
+  static Color _backgroundColorActive(DesignVariables designVariables, {
+    required ZulipWebUiKitButtonAttention attention,
+    required ZulipWebUiKitButtonIntent intent,
+  }) {
+    switch ((attention, intent)) {
+      case (.minimal, .neutral):
+        return designVariables.neutralButtonBg.withFadedAlpha(0.3);
+      case (.low,     .neutral):
+        return designVariables.btnBgAttLowIntNeutralActive;
+      case (.medium,  .neutral):
+      case (.high,    .neutral):
+      case (.minimal, .warning):
+      case (.low,     .warning):
+        throw UnimplementedError();
+      case (.medium,  .warning):
+        return designVariables.btnBgAttMediumIntWarningActive;
+      case (.high,    .warning):
+        return designVariables.btnBgAttHighIntWarningActive;
+      case (.minimal, .danger):
+        throw UnimplementedError();
+      case (.low,     .danger):
+        return designVariables.btnBgAttLowIntDangerActive;
+      case (.medium,  .danger):
+        return designVariables.btnBgAttMediumIntDangerActive;
+      case (.high,    .danger):
+      case (.minimal, .info):
+        throw UnimplementedError();
+      case (.low,     .info):
+        return designVariables.btnBgAttLowIntInfoActive;
+      case (.medium,  .info):
+        return designVariables.btnBgAttMediumIntInfoActive;
+      case (.high,    .info):
+        return designVariables.btnBgAttHighIntInfoActive;
+    }
+  }
+
+  /// The overlay color that, painted over [base], yields [target].
+  ///
+  /// When [target] is fully opaque
+  /// (e.g., for the press feedback in our high-attention buttons,
+  /// where both [_backgroundColorNormal] and [_backgroundColorActive] are opaque),
+  /// returns [target] to fully replace [base] via a fully-opaque overlay.
+  ///
+  /// Otherwise, for same-hue semi-transparent [base]/[target] pairs,
+  /// computes the alpha the overlay needs to lift the composite
+  /// from [base]'s alpha to [target]'s.
+  ///
+  /// Assumes [target]'s alpha is at least [base]'s,
+  /// and, for the semi-transparent path,
+  /// that [base] and [target] share the same RGB.
+  static Color _overlayFor(Color base, Color target) {
+    assert(target.a >= base.a);
+    if (target.a >= 1.0) return target;
+    assert(base.a < 1.0);
+    final alpha = (target.a - base.a) / (1.0 - base.a);
+    return target.withValues(alpha: alpha);
+  }
+
+  /// The label color.
+  ///
+  /// When adding a case here,
+  /// update [_backgroundColorNormal] and [_backgroundColorActive] too.
+  static Color _labelColor(DesignVariables designVariables, {
+    required ZulipWebUiKitButtonAttention attention,
+    required ZulipWebUiKitButtonIntent intent,
+    required bool isDisabled,
+  }) {
+    Color result;
+    switch ((attention, intent)) {
+      case (.minimal, .neutral):
+        // TODO nit: don't fade in pressed state
+        result = designVariables.neutralButtonLabel.withFadedAlpha(0.85);
+      case (.low,     .neutral):
+        result = designVariables.btnLabelAttLowIntNeutral;
+      case (.medium,  .neutral):
+      case (.high,    .neutral):
+      case (.minimal, .warning):
+      case (.low,     .warning):
+        throw UnimplementedError();
+      case (.medium,  .warning):
+        result = designVariables.btnLabelAttMediumIntWarning;
+      case (.high,    .warning):
+        result = designVariables.btnLabelAttHighIntWarning;
+      case (.minimal, .danger):
+        throw UnimplementedError();
+      case (.low,     .danger):
+        result = designVariables.btnLabelAttLowIntDanger;
+      case (.medium,  .danger):
+        result = designVariables.btnLabelAttMediumIntDanger;
+      case (.high,    .danger):
+      case (.minimal, .info):
+        throw UnimplementedError();
+      case (.low,     .info):
+        result = designVariables.btnLabelAttLowIntInfo;
+      case (.medium,  .info):
+        result = designVariables.btnLabelAttMediumIntInfo;
+      case (.high,    .info):
+        result = designVariables.btnLabelAttHigh;
+    }
+
+    return isDisabled
+      ? result.withFadedAlpha(0.5)
+      : result;
+  }
+
+  TextStyle _labelStyle(BuildContext context, {required TextScaler textScaler}) {
+    final designVariables = DesignVariables.of(context);
+    // Normal-size values chosen from the Figma frame for zulip-flutter's
+    // compose box:
+    //   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=3988-38201&m=dev
+    // Commented values come from the Figma page "Zulip Web UI kit":
+    //   https://www.figma.com/design/msWyAJ8cnMHgOMPxi7BUvA/Zulip-Web-UI-kit?node-id=1-8&p=f&m=dev
+    // Discussion:
+    //   https://github.com/zulip/zulip-flutter/pull/1432#discussion_r2023880851
+    return TextStyle(
+      color: _labelColor(designVariables,
+        attention: attention,
+        intent: intent,
+        isDisabled: onPressed == null),
+      fontSize: _forSize(16, 17 /* 16 */),
+      height: _forSize(1, 1.20 /* 1.25 */),
+      letterSpacing: _forSize(
+        0,
+        proportionalLetterSpacing(context, textScaler: textScaler,
+          0.006,
+          baseFontSize: 17 /* 16 */),
+      ),
+    ).merge(weightVariableTextStyle(context,
+        wght: 600)); // 500
+  }
+
+  BorderSide _borderSide(DesignVariables designVariables) {
+    switch (attention) {
+      case ZulipWebUiKitButtonAttention.minimal:
+      case ZulipWebUiKitButtonAttention.low:
+        return BorderSide.none;
+      case ZulipWebUiKitButtonAttention.medium:
+        // TODO inner shadow effect like `box-shadow: inset`, following Figma;
+        //   needs Flutter support for something like that:
+        //     https://github.com/flutter/flutter/issues/18636
+        //     https://github.com/flutter/flutter/issues/52999
+        //   For now, we just use a solid-stroke border with half the opacity
+        //   and half the width.
+        return BorderSide(
+          color: designVariables.btnShadowAttMed.withFadedAlpha(0.5),
+          width: 0.5);
+      case ZulipWebUiKitButtonAttention.high:
+        return BorderSide.none;
+    }
+  }
+
+  T _forSize<T>(T small, T normal) =>
+    switch (size) {
+      ZulipWebUiKitButtonSize.small => small,
+      ZulipWebUiKitButtonSize.normal => normal,
+    };
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    // With [MaterialTapTargetSize.padded],
+    // make [TextButton] set 44 instead of 48 for the touch-target height.
+    final visualDensity = VisualDensity(vertical: -1);
+    // A value that [TextButton] adds to some of its layout parameters;
+    // we can cancel out those adjustments by subtracting it.
+    final densityVerticalAdjustment = visualDensity.baseSizeAdjustment.dy;
+
+    // An upper limit when the text-size setting is large
+    // - helps prioritize more important content (like message content); #1023
+    // - prevents the vertical padding added by [MaterialTapTargetSize.padded]
+    //   from shrinking to zero as the button grows to accommodate a larger label
+    final textScaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.5);
+
+    final buttonHeight = _forSize(24, 28);
+
+    final labelColor = _labelColor(designVariables,
+      attention: attention,
+      intent: intent,
+      isDisabled: onPressed == null);
+    final backgroundColorNormal = _backgroundColorNormal(designVariables,
+      attention: attention,
+      intent: intent);
+    final backgroundColor = onPressed == null
+      ? backgroundColorNormal.withFadedAlpha(0.5) // disabled state
+      : backgroundColorNormal;
+
+    Widget result = TextButton.icon(
+      // TODO the gap between the icon and label should be 6px, not 8px
+      icon: icon != null ? Icon(icon) : null,
+      style: TextButton.styleFrom(
+        foregroundColor: labelColor,
+        backgroundColor: backgroundColor,
+
+        iconSize: 16,
+        iconColor: labelColor,
+        padding: EdgeInsets.symmetric(
+          horizontal: _forSize(6, 10),
+          vertical: 4 - densityVerticalAdjustment,
+        ),
+        shape: RoundedRectangleBorder(
+          side: _borderSide(designVariables),
+          borderRadius: BorderRadius.circular(_forSize(6, 4))),
+        splashFactory: NoSplash.splashFactory,
+
+        // These three arguments make the button `buttonHeight` tall,
+        // but with vertical padding to make the touch target 44px tall:
+        //   https://github.com/zulip/zulip-flutter/pull/1432#discussion_r2023907300
+        visualDensity: visualDensity,
+        tapTargetSize: MaterialTapTargetSize.padded,
+        minimumSize: Size(
+          kMinInteractiveDimension,
+          buttonHeight - densityVerticalAdjustment,
+        ),
+      ).copyWith(
+        // [TextButton.styleFrom]'s overlayColor takes a single [Color] (and
+        // wraps it with M3-default state-layer alphas). To use our own
+        // state-mapped overlay, pass it here on the underlying [ButtonStyle].
+        overlayColor: WidgetStateProperty.fromMap({
+          WidgetState.pressed: _overlayFor(backgroundColorNormal,
+            _backgroundColorActive(designVariables,
+              attention: attention, intent: intent)),
+          WidgetState.any: Colors.transparent,
+        })),
+      onPressed: onPressed,
+      label: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 240),
+        child: Text(label,
+          textScaler: textScaler,
+          maxLines: 1,
+          style: _labelStyle(context, textScaler: textScaler),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis)));
+
+    if (onPressed != null) {
+      result = AnimatedScaleOnPress(
+        scaleEnd: 0.96,
+        duration: Duration(milliseconds: 100),
+        child: result);
+    }
+
+    return result;
+  }
+}
+
+// TODO follow web's rename of "attention" to "variant":
+//   low, medium, high -> text, subtle, solid
+// See web PR:
+//   https://github.com/zulip/zulip/pull/37424
+// and discussion:
+//   https://chat.zulip.org/#narrow/channel/530-mobile-design/topic/Design.20of.20banner.20for.20unsupported.20server/near/2412680
+enum ZulipWebUiKitButtonAttention {
+  high,
+  medium,
+  low,
+
+  /// An ad hoc value for the "Reveal message" button
+  /// on a message from a muted sender:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6092-50786&m=dev
+  minimal,
+}
+
+enum ZulipWebUiKitButtonIntent {
+  neutral,
+  warning,
+  danger,
+  info,
+  // success,
+  // brand,
+}
+
+enum ZulipWebUiKitButtonSize {
+  /// A smaller size than the one in the Zulip Web UI Kit.
+  ///
+  /// This was ad hoc for mobile, for the "Reveal message" button
+  /// on a message from a muted sender:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6092-50786&m=dev
+  small,
+
+  normal,
+}
+
+/// An icon button.
+///
+/// Pass [intent] to choose a color scheme from the Zulip Web UI Kit,
+/// which this widget is mostly based on:
+///   https://www.figma.com/design/msWyAJ8cnMHgOMPxi7BUvA/Zulip-Web-UI-kit?node-id=8-1681&m=dev
+/// If [intent] is not passed, uses the single color scheme from mobile Figma:
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=7728-10468&m=dev
+///
+/// Sizing is adapted from the Web UI Kit to mobile; see [ZulipIconButtonSize].
+///
+/// For how to use this as the "suffix icon" in a text field,
+/// see [baseFilledInputDecoration] in lib/widgets/input.dart.
+class ZulipIconButton extends StatelessWidget {
+  const ZulipIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.size = .medium,
+    this.intent,
+    this.backgroundWhenPressed = true,
+    this.isSelected,
+    this.selectedIcon,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final ZulipIconButtonSize size;
+  final ZulipWebUiKitButtonIntent? intent;
+
+  /// Whether to paint a background when pressed, for touch feedback.
+  ///
+  /// Corresponds to the "bg" param for the Zulip Web UI Kit component:
+  ///   https://www.figma.com/design/msWyAJ8cnMHgOMPxi7BUvA/Zulip-Web-UI-kit?node-id=8-1680&m=dev
+  final bool backgroundWhenPressed;
+
+  /// A value for the underlying [IconButton.isSelected].
+  final bool? isSelected;
+
+  /// A value for the underlying [IconButton.selectedIcon].
+  final IconData? selectedIcon;
+
+  Color _iconColor(DesignVariables designVariables) {
+    if (intent == null) return designVariables.icon;
+    return ZulipWebUiKitButton._labelColor(designVariables,
+      attention: .low,
+      intent: intent!,
+      isDisabled: false).withFadedAlpha(0.7);
+  }
+
+  /// The static background color.
+  ///
+  /// The Web UI Kit always uses "low" attention for icon buttons,
+  /// which means transparent in the resting state.
+  /// The mobile-specific scheme used when [intent] is null
+  /// is also transparent at rest.
+  static const _backgroundColorNormal = Colors.transparent;
+
+  WidgetStateProperty<Color> _overlayColor(DesignVariables designVariables) {
+    if (!backgroundWhenPressed) return WidgetStatePropertyAll(Colors.transparent);
+    final Color pressed;
+    if (intent != null) {
+      pressed = ZulipWebUiKitButton._overlayFor(_backgroundColorNormal,
+        ZulipWebUiKitButton._backgroundColorActive(designVariables,
+          attention: .low, intent: intent!));
+    } else {
+      // Really `fg-05` from the Zulip Web UI Kit palette,
+      // but this seems at least as good as that.
+      pressed = designVariables.foreground.withFadedAlpha(0.05);
+    }
+    return WidgetStateProperty.fromMap({
+      WidgetState.pressed: pressed,
+      WidgetState.any: Colors.transparent,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    return IconButton(
+      iconSize: size.icon,
+      icon: Icon(icon),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        foregroundColor: _iconColor(designVariables),
+        backgroundColor: _backgroundColorNormal,
+        tapTargetSize: .shrinkWrap,
+        fixedSize: size.surface,
+
+        // TODO(#417): Disable splash effects for all buttons globally.
+        splashFactory: NoSplash.splashFactory,
+
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4)))
+      ).copyWith(
+        // [IconButton.styleFrom]'s overlayColor takes a single [Color] (and
+        // wraps it with M3-default state-layer alphas). To use our own
+        // state-mapped overlay, pass it here on the underlying [ButtonStyle].
+        overlayColor: _overlayColor(designVariables)),
+      isSelected: isSelected,
+      selectedIcon: selectedIcon != null ? Icon(selectedIcon!) : null,
+    );
+  }
+}
+
+/// Sizing parameters for [ZulipIconButton]; a value for [ZulipIconButton.size].
+enum ZulipIconButtonSize {
+  /// The size to use in most places.
+  ///
+  /// This follows the mobile-specific "icon button" component:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=7728-10468&m=dev
+  /// which the Figma uses for a button in the "All channels" page
+  /// that we dropped in commit 4b42f7a00.
+  medium,
+
+  /// Like [medium], but with a larger [surface].
+  large,
+  ;
+
+  /// The dimension of the square icon.
+  double get icon => switch (this) {
+    medium || large => 24,
+  };
+
+  /// The size of the surface that the touch-response background is painted on.
+  ///
+  /// Currently this equals the size of the touch target,
+  /// but we could support outer "touch slop" padding in future,
+  /// as [ZulipWebUiKitButton] does.
+  Size get surface => switch (this) {
+    medium => const Size.square(40),
+    large => const Size.square(48),
+  };
+}
+
+/// Apply [Transform.scale] to the child widget on primary pointer-down,
+/// and reset its scale on -up or -cancel, with animated transitions.
+class AnimatedScaleOnPress extends StatefulWidget {
+  const AnimatedScaleOnPress({
+    super.key,
+    required this.scaleEnd,
+    required this.duration,
+    required this.child,
+  });
+
+  /// The terminal scale to animate to.
+  final double scaleEnd;
+
+  /// The duration over which to animate the scale change.
+  final Duration duration;
+
+  final Widget child;
+
+  @override
+  State<AnimatedScaleOnPress> createState() => _AnimatedScaleOnPressState();
+}
+
+class _AnimatedScaleOnPressState extends State<AnimatedScaleOnPress> {
+  double _scale = 1;
+
+  void _changeScale(double scale) {
+    setState(() {
+      _scale = scale;
+    });
+  }
+
+  void _checkBounds(PointerEvent event) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    // The pointer may be out of the child widget's bounds. When this happens,
+    // the child should be full-size even if the primary pointer is down.
+    if (!box.size.contains(box.globalToLocal(event.position))) {
+      _changeScale(1.0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        if ((event.buttons & kPrimaryButton) != 0) {
+          _changeScale(widget.scaleEnd);
+        }
+      },
+      onPointerUp: (event) {
+        if ((event.buttons & kPrimaryButton) == 0) {
+          // `.buttons` are the pointer buttons which are pressed
+          // immediately after the action that caused the event.
+          // When the primary button is up, the button should be full-size.
+          _changeScale(1);
+        }
+      },
+      onPointerCancel: (_) {
+        // Return child to full-size on system-level interruption
+        // (e.g., notification, app backgrounding).
+        _changeScale(1);
+      },
+      onPointerMove: (event) {
+        _checkBounds(event);
+      },
+      child: AnimatedScale(
+        scale: _scale,
+        duration: widget.duration,
+        curve: Curves.easeOut,
+        child: widget.child));
+  }
+}
+
+/// The rounded-rectangle shape and 1-pixel spacing for a run of [ZulipMenuItemButton]s.
+class MenuButtonsShape extends StatelessWidget {
+  const MenuButtonsShape({
+    super.key,
+    required this.buttons,
+  });
+
+  final List<Widget> buttons;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: Column(spacing: 1,
+        children: buttons));
+  }
+}
+
+/// The "menu button" or "list button" component in Figma.
+///
+/// Use [ZulipMenuItemButtonStyle] to choose between components.
+///
+/// Must have a [MenuButtonsShape] ancestor.
+///
+/// See Figma:
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6070-60681&m=dev
+class ZulipMenuItemButton extends StatelessWidget {
+  const ZulipMenuItemButton({
+    super.key,
+    required this.style,
+    required this.label,
+    this.subLabel,
+    required this.onPressed,
+    this.icon,
+    this.toggle,
+  });
+
+  final ZulipMenuItemButtonStyle style;
+  final String label;
+  final TextSpan? subLabel;
+  final VoidCallback onPressed;
+  final IconData? icon;
+
+  /// A [Toggle] to go before [icon], or in its place if it's null.
+  ///
+  /// See Figma:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6070-60682&m=dev
+  // TODO(design) Is the toggle option meant only for
+  //   [ZulipMenuItemButtonStyle.menu]?
+  final Widget? toggle;
+
+  double get itemSpacingAndEndPadding => switch (style) {
+    ZulipMenuItemButtonStyle.menu
+      || ZulipMenuItemButtonStyle.menuDestructive => 16,
+    ZulipMenuItemButtonStyle.list => 12,
+  };
+
+  static bool _debugCheckShapeAncestor(BuildContext context) {
+    final ancestor = context.findAncestorWidgetOfExactType<MenuButtonsShape>();
+    assert(() {
+      if (ancestor != null) return true;
+      throw FlutterError.fromParts([
+        ErrorSummary('No MenuButtonsShape ancestor found.'),
+        ErrorDescription('ZulipMenuItemButton widgets require a MenuButtonsShape ancestor.'),
+      ]);
+    }());
+    return true;
+  }
+
+  WidgetStateColor _backgroundColor(DesignVariables designVariables) {
+    switch (style) {
+      case ZulipMenuItemButtonStyle.menu:
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.contextMenuItemBg.withFadedAlpha(0.20),
+          ~WidgetState.pressed: designVariables.contextMenuItemBg.withFadedAlpha(0.12),
+        });
+      case ZulipMenuItemButtonStyle.menuDestructive:
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.contextMenuItemBgDanger.withFadedAlpha(0.20),
+          ~WidgetState.pressed: designVariables.contextMenuItemBgDanger.withFadedAlpha(0.12),
+        });
+      case ZulipMenuItemButtonStyle.list:
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.listMenuItemBg.withFadedAlpha(0.7),
+          ~WidgetState.pressed: designVariables.listMenuItemBg.withFadedAlpha(0.35),
+        });
+    }
+  }
+
+  Color _labelColor(DesignVariables designVariables) {
+    return switch (style) {
+      ZulipMenuItemButtonStyle.menu => designVariables.contextMenuItemText,
+      ZulipMenuItemButtonStyle.menuDestructive => designVariables.contextMenuItemTextDanger,
+      ZulipMenuItemButtonStyle.list => designVariables.listMenuItemText,
+    };
+  }
+
+  double _labelWght() {
+    return switch (style) {
+      ZulipMenuItemButtonStyle.menu
+        || ZulipMenuItemButtonStyle.menuDestructive => 600,
+      ZulipMenuItemButtonStyle.list => 500,
+    };
+  }
+
+  Color _iconColor(DesignVariables designVariables) {
+    return switch (style) {
+      ZulipMenuItemButtonStyle.menu => designVariables.contextMenuItemIcon,
+      ZulipMenuItemButtonStyle.menuDestructive => designVariables.contextMenuItemIconDanger,
+      ZulipMenuItemButtonStyle.list => designVariables.listMenuItemIcon,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _debugCheckShapeAncestor(context);
+
+    final designVariables = DesignVariables.of(context);
+
+    // (see `trailingIcon`)
+    assert(Theme.of(context).visualDensity == VisualDensity.standard);
+
+    return MenuItemButton(
+      trailingIcon: (icon != null || toggle != null)
+        ? Padding(
+            // This Material widget gives us 12px padding before the icon --
+            // or more or less, depending on Theme.of(context).visualDensity,
+            // hence the `assert` above.
+            padding: EdgeInsetsDirectional.only(start: itemSpacingAndEndPadding - 12),
+
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: itemSpacingAndEndPadding,
+              children: [
+                ?toggle,
+                if (icon != null) Icon(icon!, color: _iconColor(designVariables)),
+              ]))
+        : null,
+      style: MenuItemButton.styleFrom(
+        minimumSize: Size.fromHeight(48),
+        padding: EdgeInsetsDirectional.only(start: 16, end: itemSpacingAndEndPadding),
+        foregroundColor: _labelColor(designVariables),
+        splashFactory: NoSplash.splashFactory,
+      ).copyWith(backgroundColor: _backgroundColor(designVariables)),
+      overflowAxis: Axis.vertical,
+      onPressed: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: localizedTextBaseline(context),
+          children: [
+            Flexible(child: Text(label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 20, height: 24 / 20)
+                .merge(weightVariableTextStyle(context, wght: _labelWght())))),
+            if (subLabel != null)
+              Flexible(child: Text.rich(subLabel!,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 16 / 16,
+                  color: _labelColor(designVariables).withFadedAlpha(0.70),
+                ).merge(weightVariableTextStyle(context, wght: _labelWght())))),
+          ],
+        )));
+  }
+}
+
+/// The style of a [ZulipMenuItemButton].
+enum ZulipMenuItemButtonStyle {
+  /// The purple "menu button" component in Figma, with 16px end padding.
+  ///
+  /// See Figma:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=3302-20443&m=dev
+  menu,
+
+  /// The red, destructive variant of [menu].
+  ///
+  /// See Figma:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6329-127234&m=dev
+  menuDestructive,
+
+  /// The gray "list button" component in Figma, with 12px end padding.
+  ///
+  /// See Figma:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=5000-52868&m=dev
+  list,
+}
+
+/// The "toggle" component in Figma.
+///
+/// If [onChanged] is null, the switch will be displayed as disabled.
+/// (Like in the Material [Switch] widget.)
+///
+/// See Figma:
+///    https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6070-60682&m=dev
+class Toggle extends StatelessWidget {
+  const Toggle({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    // Figma has this (blue/500) in both light and dark mode.
+    // TODO(#831)
+    final activeColor = Color(0xff4370f0);
+
+    final activeColorDisabled = activeColor.withFadedAlpha(0.4);
+
+    // Figma has this (grey/400) in both light and dark mode.
+    // TODO(#831)
+    final inactiveColor = Color(0xff9194a3);
+
+    final inactiveColorDisabled = inactiveColor.withFadedAlpha(0.4);
+
+    final trackColor = WidgetStateColor.fromMap({
+      WidgetState.selected  & ~WidgetState.disabled: activeColor,
+      WidgetState.selected  &  WidgetState.disabled: activeColorDisabled,
+      ~WidgetState.selected & ~WidgetState.disabled: inactiveColor,
+      ~WidgetState.selected &  WidgetState.disabled: inactiveColorDisabled,
+    });
+
+    // TODO(#1636):
+    //   All of these just need _SwitchConfig to be exposed,
+    //   and there's an upstream issue for that:
+    //     https://github.com/flutter/flutter/issues/131478
+    //
+    //   - active thumb radius should be 10px, not 12px
+    //     (_SwitchConfig.thumbRadiusWithIcon)
+    //   - inactive thumb radius should be 7px, not 8px
+    //     (_SwitchConfig.inactiveThumbRadius)
+    //   - track dimensions before trackOutlineWidth should be 24px by 44px,
+    //     not 32px by 52px (_SwitchConfig.trackHeight and trackWidth).
+
+    return Switch(
+      value: value,
+      onChanged: onChanged,
+      padding: EdgeInsets.zero,
+      splashRadius: 0,
+      thumbIcon: WidgetStateProperty<Icon?>.fromMap({
+        WidgetState.selected: Icon(ZulipIcons.check, size: 16, color: activeColor),
+        ~WidgetState.selected: null,
+      }),
+
+      thumbColor: WidgetStateProperty.fromMap({
+        WidgetState.selected: Colors.white,
+        ~WidgetState.selected: designVariables.mainBackground,
+      }),
+
+      trackColor: trackColor,
+      trackOutlineColor: WidgetStatePropertyAll(Colors.transparent),
+      trackOutlineWidth: WidgetStateProperty<double>.fromMap({
+        // The outline is effectively painted with strokeAlignCenter:
+        //   https://api.flutter.dev/flutter/painting/BorderSide/strokeAlignCenter-constant.html
+        WidgetState.selected: 2 * 2,
+        ~WidgetState.selected: 1 * 2,
+      }),
+      overlayColor: WidgetStatePropertyAll(Colors.transparent),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}

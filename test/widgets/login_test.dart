@@ -1,0 +1,538 @@
+import 'dart:async';
+
+import 'package:checks/checks.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_checks/flutter_checks.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:zulip/api/core.dart';
+import 'package:zulip/api/model/web_auth.dart';
+import 'package:zulip/api/route/account.dart';
+import 'package:zulip/api/route/realm.dart';
+import 'package:zulip/api/route/users.dart';
+import 'package:zulip/model/binding.dart';
+import 'package:zulip/model/localizations.dart';
+import 'package:zulip/model/store.dart';
+import 'package:zulip/widgets/app.dart';
+import 'package:zulip/widgets/home.dart';
+import 'package:zulip/widgets/login.dart';
+import 'package:zulip/widgets/page.dart';
+
+import '../api/fake_api.dart';
+import '../api/route/route_checks.dart';
+import '../example_data.dart' as eg;
+import '../model/binding.dart';
+import '../stdlib_checks.dart';
+import '../test_images.dart';
+import '../test_navigation.dart';
+import 'dialog_checks.dart';
+import 'checks.dart';
+
+void main() {
+  TestZulipBinding.ensureInitialized();
+
+  group('ServerUrlTextEditingController.tryParse', () {
+    final controller = ServerUrlTextEditingController();
+
+    void expectUrlFromText(String text, String expectedUrl) {
+      test('text "$text" gives URL "$expectedUrl"', () {
+        controller.text = text;
+        final result = controller.tryParse();
+        check(result.error).isNull();
+        check(result.url).isNotNull().asString.equals(expectedUrl);
+      });
+    }
+
+    void expectErrorFromText(String text, ServerUrlValidationError expectedError) {
+      test('text "$text" gives error "$expectedError"', () {
+        controller.text = text;
+        final result = controller.tryParse();
+        check(result.url).isNull();
+        check(result.error).equals(expectedError);
+      });
+    }
+
+    expectUrlFromText('https://chat.zulip.org',   'https://chat.zulip.org');
+    expectUrlFromText('https://chat.zulip.org/',  'https://chat.zulip.org/');
+    expectUrlFromText(' https://chat.zulip.org ', 'https://chat.zulip.org');
+    expectUrlFromText('http://chat.zulip.org',    'http://chat.zulip.org');
+    expectUrlFromText('chat.zulip.org',           'https://chat.zulip.org');
+    expectUrlFromText('192.168.1.21:9991',        'https://192.168.1.21:9991');
+    expectUrlFromText('http://192.168.1.21:9991', 'http://192.168.1.21:9991');
+
+    expectErrorFromText('',                  ServerUrlValidationError.empty);
+    expectErrorFromText(' ',                 ServerUrlValidationError.empty);
+    expectErrorFromText('zulip://foo',       ServerUrlValidationError.unsupportedSchemeZulip);
+    expectErrorFromText('ftp://foo',         ServerUrlValidationError.unsupportedSchemeOther);
+    expectErrorFromText('!@#*asd;l4fkj',     ServerUrlValidationError.invalidUrl);
+    expectErrorFromText('email@example.com', ServerUrlValidationError.noUseEmail);
+  });
+
+  group('AddAccountPage', () {
+    late FakeApiConnection connection;
+    List<Route<dynamic>> pushedRoutes = [];
+    List<Route<dynamic>> poppedRoutes = [];
+
+    List<Route<dynamic>> takePushedRoutes() {
+      final routes = pushedRoutes.toList();
+      pushedRoutes.clear();
+      return routes;
+    }
+
+    Future<void> prepare(WidgetTester tester) async {
+      addTearDown(testBinding.reset);
+
+      pushedRoutes = [];
+      poppedRoutes = [];
+      final testNavObserver = TestNavigatorObserver();
+      testNavObserver.onPushed = (route, prevRoute) => pushedRoutes.add(route);
+      testNavObserver.onPopped = (route, prevRoute) => poppedRoutes.add(route);
+      testNavObserver.onReplaced = (route, prevRoute) {
+        poppedRoutes.add(prevRoute!);
+        pushedRoutes.add(route!);
+      };
+
+      await tester.pumpWidget(ZulipApp(navigatorObservers: [testNavObserver]));
+      await tester.pump();
+      check(takePushedRoutes()).single.isA<WidgetRoute>().page.isA<ChooseAccountPage>();
+      await tester.tap(find.text('Add an account'));
+      check(takePushedRoutes()).single.isA<WidgetRoute>().page.isA<AddAccountPage>();
+      await testNavObserver.pumpPastTransition(tester);
+    }
+
+    Future<void> attempt(WidgetTester tester,
+        Uri realmUrl, Map<String, Object?> responseJson) async {
+      await tester.enterText(find.byType(TextField), realmUrl.toString());
+      testBinding.globalStore.useCachedApiConnections = true;
+      connection = testBinding.globalStore.apiConnection(
+        realmUrl: realmUrl,
+        zulipFeatureLevel: null);
+      connection.prepare(json: responseJson);
+      await tester.tap(find.text('Continue'));
+      await tester.pump(Duration.zero);
+    }
+
+    testWidgets('happy path', (tester) async {
+      await prepare(tester);
+
+      final serverSettings = eg.serverSettings();
+
+      await attempt(tester, serverSettings.realmUrl, serverSettings.toJson());
+      checkNoDialog(tester);
+      check(takePushedRoutes()).single.isA<WidgetRoute>().page.isA<LoginPage>()
+        .serverSettings.realmUrl.equals(serverSettings.realmUrl);
+    });
+
+    testWidgets('Server too old, well-formed response', (tester) async {
+      await prepare(tester);
+
+      final serverSettings = eg.serverSettings(
+        zulipFeatureLevel: 1, zulipVersion: '3.0');
+
+      await attempt(tester, serverSettings.realmUrl, serverSettings.toJson());
+      checkErrorDialog(tester,
+        expectedTitle: 'Could not connect',
+        expectedMessage: '${serverSettings.realmUrl} is running Zulip Server 3.0, which is unsupported. The minimum supported version is Zulip Server $kMinAllowedZulipVersion.');
+      // i.e., not the login route
+      check(takePushedRoutes()).single.isA<DialogRoute<void>>();
+    });
+
+    testWidgets('Server too old, malformed response', (tester) async {
+      await prepare(tester);
+
+      final serverSettings = eg.serverSettings(
+        zulipFeatureLevel: 1, zulipVersion: '3.0');
+      final serverSettingsMalformedJson =
+        serverSettings.toJson()..['push_notifications_enabled'] = 'abcd';
+      check(() => GetServerSettingsResult.fromJson(serverSettingsMalformedJson))
+        .throws<void>();
+
+      await attempt(tester, serverSettings.realmUrl, serverSettingsMalformedJson);
+      checkErrorDialog(tester,
+        expectedTitle: 'Could not connect',
+        expectedMessage: '${serverSettings.realmUrl} is running Zulip Server 3.0, which is unsupported. The minimum supported version is Zulip Server $kMinAllowedZulipVersion.');
+      // i.e., not the login route
+      check(takePushedRoutes()).single.isA<DialogRoute<void>>();
+    });
+
+    testWidgets('Malformed response, server not too old', (tester) async {
+      await prepare(tester);
+
+      final serverSettings = eg.serverSettings(
+        zulipVersion: eg.recentZulipVersion,
+        zulipFeatureLevel: eg.recentZulipFeatureLevel);
+      final serverSettingsMalformedJson =
+        serverSettings.toJson()..['push_notifications_enabled'] = 'abcd';
+      check(() => GetServerSettingsResult.fromJson(serverSettingsMalformedJson))
+        .throws<void>();
+
+      await attempt(tester, serverSettings.realmUrl, serverSettingsMalformedJson);
+      checkErrorDialog(tester,
+        expectedTitle: 'Could not connect',
+        expectedMessage: 'Failed to connect to server:\n${serverSettings.realmUrl}');
+      // i.e., not the login route
+      check(takePushedRoutes()).single.isA<DialogRoute<void>>();
+    });
+
+    testWidgets('help icon button launches the server-URL doc', (tester) async {
+      await prepare(tester);
+
+      final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+      await tester.tap(find.byTooltip(zulipLocalizations.loginRealmUrlHelpButton));
+      await tester.pump();
+
+      check(testBinding.takeLaunchUrlCalls()).deepEquals([(
+        url: Uri.parse('https://zulip.com/help/logging-in#find-the-zulip-log-in-url'),
+        mode: UrlLaunchMode.inAppBrowserView)]);
+    });
+
+    // TODO other errors
+  });
+
+  group('LoginPage', () {
+    late FakeApiConnection connection;
+    late List<Route<void>> pushedRoutes;
+    late List<Route<void>> poppedRoutes;
+
+    void takeStartingRoutes() {
+      final expected = <Condition<Object?>>[
+        (it) => it.isA<WidgetRoute>().page.isA<ChooseAccountPage>(),
+        (it) => it.isA<WidgetRoute>().page.isA<LoginPage>(),
+      ];
+      check(pushedRoutes.take(expected.length)).deepEquals(expected);
+      pushedRoutes.removeRange(0, expected.length);
+    }
+
+    Future<void> prepare(WidgetTester tester,
+        GetServerSettingsResult serverSettings) async {
+      addTearDown(testBinding.reset);
+
+      connection = testBinding.globalStore.apiConnection(
+        realmUrl: serverSettings.realmUrl,
+        zulipFeatureLevel: serverSettings.zulipFeatureLevel);
+
+      pushedRoutes = [];
+      poppedRoutes = [];
+      final testNavObserver = TestNavigatorObserver();
+      testNavObserver.onPushed = (route, prevRoute) => pushedRoutes.add(route);
+      testNavObserver.onPopped = (route, prevRoute) => poppedRoutes.add(route);
+      testNavObserver.onReplaced = (route, prevRoute) {
+        poppedRoutes.add(prevRoute!);
+        pushedRoutes.add(route!);
+      };
+      await tester.pumpWidget(ZulipApp(navigatorObservers: [testNavObserver]));
+      await tester.pump();
+      final navigator = await ZulipApp.navigator;
+      unawaited(navigator.push(LoginPage.buildRoute(serverSettings: serverSettings)));
+      await tester.pumpAndSettle();
+    }
+
+    final googleAuthMethod = ExternalAuthenticationMethod(
+      name: 'google',
+      displayName: 'Google',
+      displayIcon: eg.realmUrl.resolve('/static/images/authentication_backends/googl_e-icon.png').toString(),
+      loginUrl: '/accounts/login/social/google',
+      signupUrl: '/accounts/register/social/google');
+
+    final findUsernameInput = find.byWidgetPredicate((widget) =>
+      widget is TextField
+      && (widget.autofillHints ?? []).contains(AutofillHints.email));
+    final findPasswordInput = find.byWidgetPredicate((widget) =>
+      widget is TextField
+      && (widget.autofillHints ?? []).contains(AutofillHints.password));
+    final findSubmitButton = find.widgetWithText(ElevatedButton, 'Log in');
+
+    /// Check the account is as expected, ignoring fields that are
+    /// freshly generated at login time.
+    void checkMatchesAccount(Account actual, Account expected) {
+      check(actual).equals(expected.copyWith(
+        id: actual.id,
+        // The example accounts have non-null deviceId because that's how
+        // an account will typically look in the app after fully set up.
+        // But it doesn't happen at login time, so expect null at this stage.
+        deviceId: drift.Value(null),
+        possibleLegacyPushToken: false,
+      ));
+    }
+
+    group('username/password login', () {
+      void checkFetchApiKey({required String username, required String password}) {
+        check(connection.lastRequest).isA<http.Request>()
+          ..method.equals('POST')
+          ..url.path.equals('/api/v1/fetch_api_key')
+          ..bodyFields.deepEquals({
+            'username': username,
+            'password': password,
+          });
+      }
+
+      Future<void> login(WidgetTester tester, Account account) async {
+        await tester.enterText(findUsernameInput, account.email);
+        await tester.enterText(findPasswordInput, 'p455w0rd');
+        testBinding.globalStore.useCachedApiConnections = true;
+        connection.prepare(json: FetchApiKeyResult(
+          apiKey: account.apiKey,
+          email: account.email,
+          userId: account.userId,
+        ).toJson());
+        await tester.tap(findSubmitButton);
+        checkFetchApiKey(username: account.email, password: 'p455w0rd');
+        await tester.idle();
+      }
+
+      testWidgets('basic happy case', (tester) async {
+        final serverSettings = eg.serverSettings();
+        await prepare(tester, serverSettings);
+        takeStartingRoutes();
+        check(pushedRoutes).isEmpty();
+        check(testBinding.globalStore.accounts).isEmpty();
+
+        await login(tester, eg.selfAccount);
+        checkMatchesAccount(testBinding.globalStore.accounts.single,
+          eg.selfAccount);
+      });
+
+      testWidgets('logging into a second account', (tester) async {
+        await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
+        final serverSettings = eg.serverSettings();
+        await prepare(tester, serverSettings);
+        check(poppedRoutes).isEmpty();
+        check(pushedRoutes).deepEquals(<Condition<Object?>>[
+          (it) => it.isA<WidgetRoute>().page.isA<HomePage>(),
+          (it) => it.isA<WidgetRoute>().page.isA<LoginPage>(),
+        ]);
+        pushedRoutes.clear();
+
+        await login(tester, eg.otherAccount);
+        final newAccount = testBinding.globalStore.accounts.singleWhere(
+          (account) => account.userId != eg.selfAccount.userId);
+        checkMatchesAccount(newAccount, eg.otherAccount);
+        check(poppedRoutes).length.equals(2);
+        check(pushedRoutes).single.isA<WidgetRoute>().page.isA<HomePage>();
+      });
+
+      testWidgets('trims whitespace on username', (tester) async {
+        final serverSettings = eg.serverSettings();
+        await prepare(tester, serverSettings);
+        takeStartingRoutes();
+        check(pushedRoutes).isEmpty();
+        check(testBinding.globalStore.accounts).isEmpty();
+
+        await tester.enterText(findUsernameInput, '  ${eg.selfAccount.email}  ');
+        await tester.enterText(findPasswordInput, 'p455w0rd');
+        testBinding.globalStore.useCachedApiConnections = true;
+        connection.prepare(json: FetchApiKeyResult(
+          apiKey: eg.selfAccount.apiKey,
+          email: eg.selfAccount.email,
+          userId: eg.selfAccount.userId,
+        ).toJson());
+        await tester.tap(findSubmitButton);
+        checkFetchApiKey(username: eg.selfAccount.email, password: 'p455w0rd');
+        await tester.idle();
+        checkMatchesAccount(testBinding.globalStore.accounts.single,
+          eg.selfAccount);
+      });
+
+      testWidgets('account already exists', (tester) async {
+        final serverSettings = eg.serverSettings();
+        await prepare(tester, serverSettings);
+        takeStartingRoutes();
+        check(pushedRoutes).isEmpty();
+        check(testBinding.globalStore.accounts).isEmpty();
+        await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
+
+        await tester.enterText(findUsernameInput, eg.selfAccount.email);
+        await tester.enterText(findPasswordInput, 'p455w0rd');
+        testBinding.globalStore.useCachedApiConnections = true;
+        connection.prepare(json: FetchApiKeyResult(
+          apiKey: eg.selfAccount.apiKey,
+          email: eg.selfAccount.email,
+          userId: eg.selfAccount.userId,
+        ).toJson());
+        await tester.tap(findSubmitButton);
+        await tester.pumpAndSettle();
+
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+        await tester.tap(find.byWidget(checkErrorDialog(tester,
+          expectedTitle: zulipLocalizations.errorAccountLoggedInTitle)));
+      });
+
+      testWidgets('creates account with data from server settings', (tester) async {
+        final serverSettings = eg.serverSettings(
+          realmName: 'Some organization',
+          realmIcon: Uri.parse('/some-image.png'),
+          zulipFeatureLevel: 427,
+          zulipVersion: '12.0-dev-524-ga557b1e721',
+          zulipMergeBase: '12.0-dev-523-g72e3b94855',
+        );
+        await prepare(tester, serverSettings);
+        takeStartingRoutes();
+        check(pushedRoutes).isEmpty();
+        check(testBinding.globalStore.accounts).isEmpty();
+
+        await login(tester, eg.selfAccount);
+        checkMatchesAccount(testBinding.globalStore.accounts.single,
+          eg.selfAccount.copyWith(
+            realmName: Value('Some organization'),
+            realmIcon: Value(Uri.parse('/some-image.png')),
+            zulipFeatureLevel: 427,
+            zulipVersion: '12.0-dev-524-ga557b1e721',
+            zulipMergeBase: Value('12.0-dev-523-g72e3b94855')));
+      });
+
+      // TODO test validators on the TextFormField widgets
+      // TODO test _getUserId case
+      // TODO test handling failure in fetchApiKey request
+      // TODO test _inProgress logic
+    });
+
+    group('password auth visibility', () {
+      testWidgets('hides username/password fields and login button', (tester) async {
+        final serverSettings = eg.serverSettings(
+          emailAuthEnabled: false,
+          authenticationMethods: eg.authMethods(ldap: false));
+        await prepare(tester, serverSettings);
+        check(findUsernameInput).findsNothing();
+        check(findPasswordInput).findsNothing();
+        check(findSubmitButton).findsNothing();
+      });
+
+      testWidgets('shows fields when email auth disabled but LDAP enabled', (tester) async {
+        final serverSettings = eg.serverSettings(
+          emailAuthEnabled: false,
+          authenticationMethods: eg.authMethods(ldap: true),
+        );
+        await prepare(tester, serverSettings);
+        check(findUsernameInput).findsOne();
+        check(findPasswordInput).findsOne();
+        check(findSubmitButton).findsOne();
+      });
+
+      testWidgets('shows external auth methods without divider', (tester) async {
+        prepareBoringImageHttpClient(); // icon on social-auth button
+        final serverSettings = eg.serverSettings(
+          emailAuthEnabled: false,
+          authenticationMethods: eg.authMethods(ldap: false),
+          externalAuthenticationMethods: [googleAuthMethod]);
+        await prepare(tester, serverSettings);
+        check(find.textContaining('Google')).findsOne();
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+        check(find.bySemanticsLabel(zulipLocalizations.loginMethodDividerSemanticLabel))
+          .findsNothing();
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('shows divider when email auth enabled with external methods', (tester) async {
+        prepareBoringImageHttpClient(); // icon on social-auth button
+        final serverSettings = eg.serverSettings(
+          emailAuthEnabled: true,
+          externalAuthenticationMethods: [googleAuthMethod]);
+        await prepare(tester, serverSettings);
+        check(findUsernameInput).findsOne();
+        check(findPasswordInput).findsOne();
+        check(findSubmitButton).findsOne();
+        check(find.textContaining('Google')).findsOne();
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+        check(find.bySemanticsLabel(zulipLocalizations.loginMethodDividerSemanticLabel))
+          .findsOne();
+        debugNetworkImageHttpClientProvider = null;
+      });
+    });
+
+    group('web auth', () {
+      for (final supportsClose in [true, false]) {
+        testWidgets('basic happy case; supports closing browser: $supportsClose', (tester) async {
+        final serverSettings = eg.serverSettings(
+          externalAuthenticationMethods: [googleAuthMethod]);
+        prepareBoringImageHttpClient(); // icon on social-auth button
+        await prepare(tester, serverSettings);
+        testBinding.supportsCloseForLaunchModeResult = supportsClose;
+        takeStartingRoutes();
+        check(pushedRoutes).isEmpty();
+        check(testBinding.globalStore.accounts).isEmpty();
+
+        const otp = '186f6d085a5621ebaf1ccfc05033e8acba57dae03f061705ac1e58c402c30a31';
+        LoginPage.debugOtpOverride = otp;
+        await tester.tap(find.textContaining('Google'));
+
+        final expectedUrl = eg.realmUrl.resolve(googleAuthMethod.loginUrl)
+          .replace(queryParameters: {'mobile_flow_otp': otp});
+        check(testBinding.takeLaunchUrlCalls())
+          .deepEquals([(url: expectedUrl, mode: UrlLaunchMode.inAppBrowserView)]);
+
+        // TODO test _inProgress logic?
+
+        final encoded = debugEncodeApiKey(eg.selfAccount.apiKey, otp);
+        final url = Uri(scheme: 'zulip', host: 'login', queryParameters: {
+          'otp_encrypted_api_key': encoded,
+          'email': eg.selfAccount.email,
+          'user_id': eg.selfAccount.userId.toString(),
+          'realm': eg.selfAccount.realmUrl.toString(),
+        });
+
+        final ByteData message = const JSONMethodCodec().encodeMethodCall(
+          MethodCall('pushRouteInformation', {'location': url.toString()}));
+        await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          'flutter/navigation', message, null);
+
+        check(testBinding.takeCloseInAppWebViewCallCount())
+          .equals(supportsClose ? 1 : 0);
+
+        final account = testBinding.globalStore.accounts.single;
+        checkMatchesAccount(account, eg.selfAccount);
+        check(pushedRoutes).single.isA<MaterialAccountWidgetRoute>()
+          ..accountId.equals(account.id)
+          ..page.isA<HomePage>();
+
+        debugNetworkImageHttpClientProvider = null;
+        });
+      }
+
+      testWidgets('accepts a different callback realm after validating credentials',
+          (tester) async {
+        final serverSettings = eg.serverSettings(
+          externalAuthenticationMethods: [googleAuthMethod]);
+        prepareBoringImageHttpClient(); // icon on social-auth button
+        await prepare(tester, serverSettings);
+        takeStartingRoutes();
+
+        const otp = '186f6d085a5621ebaf1ccfc05033e8acba57dae03f061705ac1e58c402c30a31';
+        LoginPage.debugOtpOverride = otp;
+        await tester.tap(find.textContaining('Google'));
+        testBinding.takeLaunchUrlCalls();
+
+        testBinding.globalStore.useCachedApiConnections = true;
+        final validationConnection = testBinding.globalStore.apiConnection(
+          realmUrl: serverSettings.realmUrl,
+          zulipFeatureLevel: serverSettings.zulipFeatureLevel,
+          email: eg.selfAccount.email,
+          apiKey: eg.selfAccount.apiKey);
+        validationConnection.prepare(json: GetOwnUserResult(
+          userId: eg.selfAccount.userId).toJson());
+
+        final encoded = debugEncodeApiKey(eg.selfAccount.apiKey, otp);
+        final url = Uri(scheme: 'zulip', host: 'login', queryParameters: {
+          'otp_encrypted_api_key': encoded,
+          'email': eg.selfAccount.email,
+          'user_id': eg.selfAccount.userId.toString(),
+          'realm': 'http://zulip:9991',
+        });
+
+        await tester.runAsync(() => LoginPage.handleWebAuthUrl(url));
+
+        check(validationConnection.lastRequest).isA<http.Request>()
+          ..method.equals('GET')
+          ..url.path.equals('/api/v1/users/me');
+        final account = testBinding.globalStore.accounts.single;
+        checkMatchesAccount(account, eg.selfAccount);
+
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      // TODO failures, such as: invalid loginUrl; URL can't be launched;
+      //   WebAuthPayload.realm doesn't match the realm the UI is about
+    });
+  });
+}

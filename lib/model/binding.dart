@@ -1,0 +1,678 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart' as connectivity_plus;
+import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
+import 'package:file_picker/file_picker.dart' as file_picker;
+import 'package:firebase_core/firebase_core.dart' as firebase_core;
+import 'package:firebase_messaging/firebase_messaging.dart' as firebase_messaging;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:image_picker/image_picker.dart' as image_picker;
+import 'package:image_picker_android/image_picker_android.dart' as image_picker_android;
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart' as image_picker_platform;
+import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
+import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
+import 'package:sodium/sodium.dart';
+import 'package:url_launcher/url_launcher.dart' as url_launcher;
+import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
+
+import '../host/android_intents.dart' as android_intents_pigeon;
+import '../host/android_notifications.dart';
+import '../host/ios_notifications.g.dart';
+import '../host/notifications.dart' as notif_pigeon;
+import '../log.dart';
+import 'store.dart';
+
+export 'package:connectivity_plus/connectivity_plus.dart' show ConnectivityResult;
+export 'package:file_picker/file_picker.dart' show FilePickerResult, FileType, PlatformFile;
+export 'package:image_picker/image_picker.dart' show ImageSource, XFile;
+
+/// Alias for [url_launcher.LaunchMode].
+typedef UrlLaunchMode = url_launcher.LaunchMode;
+
+/// Alias for [firebase_messaging.RemoteMessage].
+typedef FirebaseRemoteMessage = firebase_messaging.RemoteMessage;
+
+/// A singleton service providing the app's data and use of Flutter plugins.
+///
+/// Only one instance will be constructed in the lifetime of the app,
+/// by calling the `ensureInitialized` static method on a subclass.
+/// This instance can be accessed as [instance].
+///
+/// Most code should not interact with the bindings directly.
+/// Instead, use the corresponding higher-level APIs that expose the bindings'
+/// functionality in a widget-oriented way; see [PlatformActions] for some.
+///
+/// This piece of architecture is modelled on the "binding" classes in Flutter
+/// itself.  For discussion, see [BindingBase], [WidgetsFlutterBinding], and
+/// [TestWidgetsFlutterBinding].
+/// This version is simplified because we don't (yet?) have enough complexity
+/// to put into these bindings to need to use mixins to split them up.
+abstract class ZulipBinding {
+  ZulipBinding() {
+    assert(_instance == null);
+    initInstance();
+  }
+
+  /// The single instance of [ZulipBinding].
+  static ZulipBinding get instance => checkInstance(_instance);
+  static ZulipBinding? _instance;
+
+  static T checkInstance<T extends ZulipBinding>(T? instance) {
+    assert(() {
+      if (instance == null) {
+        throw FlutterError.fromParts([
+          ErrorSummary('Zulip binding has not yet been initialized.'),
+          ErrorHint(
+            'In the app, this is done by the `LiveZulipBinding.ensureInitialized()` call '
+            'in the `void main()` method.',
+          ),
+          ErrorHint(
+            'In a test, one can call `TestZulipBinding.ensureInitialized()` as the '
+            'first line in the test\'s `main()` method to initialize the binding.',
+          ),
+        ]);
+      }
+      return true;
+    }());
+    return instance!;
+  }
+
+  @protected
+  @mustCallSuper
+  void initInstance() {
+    _instance = this;
+  }
+
+  /// Get the app's singleton [GlobalStore],
+  /// loading it asynchronously if not already loaded.
+  ///
+  /// Where possible, use [GlobalStoreWidget.of] to get access to a [GlobalStore].
+  /// Use this method only in contexts like notifications where
+  /// a widget tree may not exist.
+  Future<GlobalStore> getGlobalStore();
+
+  /// Get the app's singleton [GlobalStore] if already loaded, else null.
+  ///
+  /// Where possible, use [GlobalStoreWidget.of] to get access to a [GlobalStore].
+  /// Use this method only in contexts where getting access to a [BuildContext]
+  /// is inconvenient.
+  GlobalStore? getGlobalStoreSync();
+
+  /// Like [getGlobalStore], but assert this method was not previously called.
+  ///
+  /// This is used by the implementation of [GlobalStoreWidget],
+  /// so that our test framework code can detect some cases where
+  /// a widget test neglects to clean up with `testBinding.reset`.
+  Future<GlobalStore> getGlobalStoreUniquely();
+
+  /// If true, make [getGlobalStoreUniquely] behave just like [getGlobalStore].
+  bool debugRelaxGetGlobalStoreUniquely = false;
+
+  /// Checks whether the platform can launch [url], via package:url_launcher.
+  ///
+  /// This wraps [url_launcher.canLaunchUrl].
+  Future<bool> canLaunchUrl(Uri url);
+
+  /// Pass [url] to the underlying platform, via package:url_launcher.
+  ///
+  /// This wraps [url_launcher.launchUrl].
+  Future<bool> launchUrl(
+    Uri url, {
+    url_launcher.LaunchMode mode = url_launcher.LaunchMode.platformDefault,
+  });
+
+  /// Join a Consort-minted Jitsi conference inside the native app.
+  Future<void> joinJitsiCall(Uri url, {required String? subject});
+
+  /// Checks whether [closeInAppWebView] is supported, via package:url_launcher.
+  ///
+  /// This wraps [url_launcher.supportsCloseForLaunchMode].
+  Future<bool> supportsCloseForLaunchMode(url_launcher.LaunchMode mode);
+
+  /// Closes the current in-app web view, via package:url_launcher.
+  ///
+  /// This wraps [url_launcher.closeInAppWebView].
+  Future<void> closeInAppWebView();
+
+  /// Provides access to the current UTC date and time.
+  ///
+  /// Outside tests, this just calls [DateTime.timestamp].
+  DateTime utcNow();
+
+  /// Provides access to a new stopwatch.
+  ///
+  /// Outside tests, this just calls the [Stopwatch] constructor.
+  Stopwatch stopwatch();
+
+  /// A broadcast stream of the app's lifecycle-state changes,
+  /// via [AppLifecycleListener.onStateChange].
+  Stream<AppLifecycleState> get appLifecycleStateChanges;
+
+  /// A broadcast stream of updates on the device's network connectivity,
+  /// via package:connectivity_plus.
+  ///
+  /// An event describes the connectivity state as a whole, not a delta.
+  ///
+  /// While the app is in the background, updates may be dropped
+  /// rather than delivered on returning to the foreground;
+  /// to learn of a change that happened in the background,
+  /// use [checkConnectivity].
+  /// For the Android behavior, see the plugin README:
+  ///   https://github.com/fluttercommunity/plus_plugins/blob/connectivity_plus-v7.3.1/packages/connectivity_plus/connectivity_plus/README.md#android
+  /// For iOS, see the guard in the plugin implementation:
+  ///   https://github.com/fluttercommunity/plus_plugins/blob/connectivity_plus-v7.3.1/packages/connectivity_plus/connectivity_plus/ios/connectivity_plus/Sources/connectivity_plus/ConnectivityPlusPlugin.swift#L87-L92
+  ///
+  /// A subscriber's first event may describe the current state
+  /// rather than a change:
+  /// both platform implementations emit the current state
+  /// when the underlying platform channel gains its first listener,
+  /// while a subscriber that joins an already-listening channel
+  /// just sees the next change.  For the initial emissions, see:
+  ///   https://github.com/fluttercommunity/plus_plugins/blob/connectivity_plus-v7.3.1/packages/connectivity_plus/connectivity_plus/android/src/main/java/dev/fluttercommunity/plus/connectivity/ConnectivityBroadcastReceiver.java#L87-L89
+  ///   https://github.com/fluttercommunity/plus_plugins/blob/connectivity_plus-v7.3.1/packages/connectivity_plus/connectivity_plus/ios/connectivity_plus/Sources/connectivity_plus/ConnectivityPlusPlugin.swift#L73-L80
+  ///
+  /// This wraps [connectivity_plus.Connectivity.onConnectivityChanged].
+  Stream<List<connectivity_plus.ConnectivityResult>> get connectivityChanges;
+
+  /// The device's current network connectivity,
+  /// via package:connectivity_plus.
+  ///
+  /// This wraps [connectivity_plus.Connectivity.checkConnectivity].
+  Future<List<connectivity_plus.ConnectivityResult>> checkConnectivity();
+
+  /// Provides device and operating system information,
+  /// via package:device_info_plus.
+  ///
+  /// The returned Future resolves to null if an error is
+  /// encountered while fetching the data.
+  ///
+  /// This wraps [device_info_plus.DeviceInfoPlugin.deviceInfo].
+  Future<BaseDeviceInfo?> get deviceInfo;
+
+  /// Provides device and operating system information,
+  /// via package:device_info_plus.
+  ///
+  /// This is the value [deviceInfo] resolved to,
+  /// or null if that hasn't resolved yet.
+  BaseDeviceInfo? get syncDeviceInfo;
+
+  /// Provides application package information,
+  /// via package:package_info_plus.
+  ///
+  /// The returned Future resolves to null if an error is
+  /// encountered while fetching the data.
+  ///
+  /// This wraps [package_info_plus.PackageInfo.fromPlatform].
+  Future<PackageInfo?> get packageInfo;
+
+  /// Provides application package information,
+  /// via package:package_info_plus.
+  ///
+  /// This is the value [packageInfo] resolved to,
+  /// or null if that hasn't resolved yet.
+  PackageInfo? get syncPackageInfo;
+
+  /// Get the singleton for `package:sodium` aka libsodium,
+  /// used for cryptography.
+  ///
+  /// This wraps [SodiumInit.init].
+  FutureOr<Sodium> sodiumInit();
+
+  /// Initialize Firebase, to use for notifications.
+  ///
+  /// This wraps [firebase_core.Firebase.initializeApp].
+  Future<void> firebaseInitializeApp({
+      required firebase_core.FirebaseOptions options});
+
+  /// Wraps [firebase_messaging.FirebaseMessaging.instance].
+  firebase_messaging.FirebaseMessaging get firebaseMessaging;
+
+  /// Wraps [firebase_messaging.FirebaseMessaging.onMessage].
+  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage;
+
+  /// Wraps [firebase_messaging.FirebaseMessaging.onBackgroundMessage].
+  void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler);
+
+  /// Wraps the [AndroidNotificationHostApi] constructor.
+  AndroidNotificationHostApi get androidNotificationHost;
+
+  /// Wraps the [notif_pigeon.NotificationHostApi] class.
+  NotificationPigeonApi get notificationPigeonApi;
+
+  Stream<android_intents_pigeon.AndroidIntentEvent> get androidIntentEvents;
+
+  /// Wraps the [IosNotifFlutterApi.setUp] method.
+  void setupIosNotifFlutterApi(IosNotifFlutterApi api);
+
+  /// Pick files from the media library, via package:file_picker.
+  ///
+  /// This wraps [file_picker.pickFiles].
+  Future<file_picker.FilePickerResult?> pickFiles({
+    bool allowMultiple,
+    bool withReadStream,
+    file_picker.FileType type,
+  });
+
+  /// Pick files from the camera or media library, via package:image_picker.
+  ///
+  /// This wraps [image_picker.pickImage].
+  Future<image_picker.XFile?> pickImage({
+    required image_picker.ImageSource source,
+    bool requestFullMetadata,
+  });
+
+  /// Pick multiple images and/or videos from the media library,
+  /// via package:image_picker.
+  ///
+  /// This wraps [image_picker.ImagePicker.pickMultipleMedia].
+  Future<List<image_picker.XFile>> pickMultipleMedia({
+    bool requestFullMetadata,
+  });
+
+  /// Enables or disables keeping the screen on, via package:wakelock_plus.
+  ///
+  /// This wraps [wakelock_plus.WakelockPlus.toggle].
+  ///
+  /// Despite the name, this does not involve Android's "wake locks".
+  /// The implementation sets FLAG_KEEP_SCREEN_ON on Android:
+  ///   https://developer.android.com/develop/background-work/background-tasks/awake/screen-on
+  ///   https://github.com/fluttercommunity/wakelock_plus/blob/5ca5243e7894830ce289fc367bc5fdec27c7f0cf/wakelock_plus/android/src/main/kotlin/dev/fluttercommunity/plus/wakelock/Wakelock.kt
+  /// and idleTimerDisabled on iOS:
+  ///   https://developer.apple.com/documentation/uikit/uiapplication/1623070-idletimerdisabled
+  ///   https://github.com/fluttercommunity/wakelock_plus/blob/5ca5243e7894830ce289fc367bc5fdec27c7f0cf/wakelock_plus/ios/Classes/WakelockPlusPlugin.m
+  Future<void> toggleWakelock({required bool enable});
+}
+
+/// Like [device_info_plus.BaseDeviceInfo], but without things we don't use.
+abstract class BaseDeviceInfo {
+  const BaseDeviceInfo();
+}
+
+/// Like [device_info_plus.AndroidDeviceInfo], but without things we don't use.
+class AndroidDeviceInfo extends BaseDeviceInfo {
+  /// The Android version string, Build.VERSION.RELEASE, e.g. "14".
+  ///
+  /// Upstream documents this as an opaque string with no particular structure,
+  /// but e.g. on stock Android 14 it's "14".
+  ///
+  /// See: https://developer.android.com/reference/android/os/Build.VERSION#RELEASE
+  final String release;
+
+  /// The Android SDK version.
+  ///
+  /// Possible values are defined in:
+  ///   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
+  final int sdkInt;
+
+  const AndroidDeviceInfo({required this.release, required this.sdkInt});
+}
+
+/// Like [device_info_plus.IosDeviceInfo], but without things we don't use.
+class IosDeviceInfo extends BaseDeviceInfo {
+  /// The current operating system version.
+  ///
+  /// See: https://developer.apple.com/documentation/uikit/uidevice/1620043-systemversion
+  final String systemVersion;
+
+  /// The major component of the iOS version, from [systemVersion].
+  ///
+  /// Returns null if [systemVersion] can't be parsed.
+  ///
+  /// Callers should write e.g. `// TODO(ios-18)`
+  /// so we remember to simplify our code as our minimum iOS version advances.
+  // TODO(log) if can't be parsed
+  int? get majorVersion =>
+    // [IosDeviceInfo.systemVersion] is a dotted string, e.g. "17.5.1".
+    int.tryParse(systemVersion.split('.').first, radix: 10);
+
+  const IosDeviceInfo({required this.systemVersion});
+}
+
+/// Like [device_info_plus.MacOsDeviceInfo], but without things we don't use.
+class MacOsDeviceInfo extends BaseDeviceInfo {
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1414662-majorversion
+  final int majorVersion;
+
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1413801-minorversion
+  final int minorVersion;
+
+  /// See: https://developer.apple.com/documentation/foundation/operatingsystemversion/1415564-patchversion
+  final int patchVersion;
+
+  const MacOsDeviceInfo({
+    required this.majorVersion,
+    required this.minorVersion,
+    required this.patchVersion,
+  });
+}
+
+/// Like [device_info_plus.WindowsDeviceInfo], currently only used to
+/// determine if we're on Windows.
+// TODO Determine a method to identify the Windows version.
+//  Currently, we do not include Windows version information because
+//  Windows OS does not provide a straightforward way to obtain
+//  recognizable version information.
+//  Here's an example of `WindowsDeviceInfo` data[1]. Based on that
+//  data, there are two possible approaches to identify the Windows
+//  version:
+//    - One approach is to use a combination of the majorVersion,
+//      minorVersion, and buildNumber fields. However, this data does
+//      not directly correspond to recognizable Windows versions
+//      (for example major=10, minor=0, build=22631 actually represents
+//      "Windows 11, 23H2"). Refer to the link in this comment[2] for
+//      Chromium's implementation of parsing Windows version numbers.
+//    - Another approach is to use the productName field. While this
+//      field contains the Windows version, it also includes extraneous
+//      information. For example, some productName strings are:
+//      "Windows 11 Pro" and "Windows 10 Home Single Language", which
+//      makes it less ideal.
+//  [1]: https://gist.github.com/rajveermalviya/58b3add437280cc7f8356f3697099b7c
+//  [2]: https://github.com/zulip/zulip-flutter/pull/724#discussion_r1628318991
+class WindowsDeviceInfo implements BaseDeviceInfo {
+  const WindowsDeviceInfo();
+}
+
+/// Like [device_info_plus.LinuxDeviceInfo], but without things we don't use.
+class LinuxDeviceInfo implements BaseDeviceInfo {
+  /// The operating system name, 'NAME' field in /etc/os-release.
+  ///
+  /// Examples: 'Fedora', 'Debian GNU/Linux', or just 'Linux'.
+  ///
+  /// See: https://www.freedesktop.org/software/systemd/man/latest/os-release.html#NAME=
+  final String name;
+
+  /// The operating system version, 'VERSION_ID' field in /etc/os-release.
+  ///
+  /// This string contains only the version number and excludes the
+  /// OS name and version codenames.
+  ///
+  /// Examples: '17', '11.04'.
+  ///
+  /// See: https://www.freedesktop.org/software/systemd/man/latest/os-release.html#VERSION_ID=
+  final String? versionId;
+
+  const LinuxDeviceInfo({required this.name, required this.versionId});
+}
+
+/// Like [package_info_plus.PackageInfo], but without things we don't use.
+class PackageInfo {
+  final String version;
+  final String buildNumber;
+  final String packageName;
+
+  const PackageInfo({
+    required this.version,
+    required this.buildNumber,
+    required this.packageName,
+  });
+}
+
+// Pigeon generates methods under `@EventChannelApi` annotated classes
+// in global scope of the generated file. This is a helper class to
+// namespace the notification related Pigeon API under a single class.
+class NotificationPigeonApi {
+  final _hostApi = notif_pigeon.NotificationHostApi();
+
+  Future<notif_pigeon.NotificationDataFromLaunch?> getNotificationDataFromLaunch() =>
+    _hostApi.getNotificationDataFromLaunch();
+
+  /// An event stream that emits a notification payload
+  /// when a notification is tapped.
+  ///
+  /// For details, see [notif_pigeon.notificationTapEvents].
+  Stream<notif_pigeon.NotificationTapEvent> notificationTapEventsStream() =>
+    notif_pigeon.notificationTapEvents();
+}
+
+/// A concrete binding for use in the live application.
+///
+/// The global store returned by [getGlobalStore], and consequently by
+/// [GlobalStoreWidget.of] in application code, will be a [LiveGlobalStore].
+/// It therefore uses a live server and live, persistent local database.
+///
+/// Methods wrapping a plugin, like [launchUrl], invoke the actual
+/// underlying plugin method.
+class LiveZulipBinding extends ZulipBinding {
+  LiveZulipBinding() {
+    _deviceInfo = _prefetchDeviceInfo();
+    _packageInfo = _prefetchPackageInfo();
+
+    final imagePickerPlatform = image_picker_platform.ImagePickerPlatform.instance;
+    if (imagePickerPlatform is image_picker_android.ImagePickerAndroid) {
+      // Use Android Photo Picker, so that pickMultipleMedia gives a photo and
+      // video-only gallery instead of a general file browser. The package leaves this
+      // off by default. See:
+      //   https://pub.dev/documentation/image_picker_android/latest/image_picker_android/ImagePickerAndroid/useAndroidPhotoPicker.html
+      imagePickerPlatform.useAndroidPhotoPicker = true;
+    }
+  }
+
+  /// Initialize the binding if necessary, and ensure it is a [LiveZulipBinding].
+  static LiveZulipBinding ensureInitialized() {
+    if (ZulipBinding._instance == null) {
+      LiveZulipBinding();
+    }
+    return ZulipBinding.instance as LiveZulipBinding;
+  }
+
+  @override
+  Future<GlobalStore> getGlobalStore() {
+    return _globalStoreFuture ??= LiveGlobalStore.load().then((store) {
+      return _globalStore = store;
+    });
+  }
+
+  @override
+  GlobalStore? getGlobalStoreSync() => _globalStore;
+
+  Future<GlobalStore>? _globalStoreFuture;
+  GlobalStore? _globalStore;
+
+  @override
+  Future<GlobalStore> getGlobalStoreUniquely() {
+    assert(debugRelaxGetGlobalStoreUniquely
+        || _debugEnforceGetGlobalStoreUniquely());
+    return getGlobalStore();
+  }
+
+  bool _debugEnforceGetGlobalStoreUniquely() {
+    assert(!_debugCalledGetGlobalStoreUniquely);
+    assert(_debugCalledGetGlobalStoreUniquely = true);
+    return true;
+  }
+  bool _debugCalledGetGlobalStoreUniquely = false;
+
+  @override
+  Future<bool> canLaunchUrl(Uri url) => url_launcher.canLaunchUrl(url);
+
+  @override
+  Future<bool> launchUrl(
+    Uri url, {
+    url_launcher.LaunchMode mode = url_launcher.LaunchMode.platformDefault,
+  }) {
+    return url_launcher.launchUrl(url, mode: mode);
+  }
+
+  @override
+  Future<void> joinJitsiCall(Uri url, {required String? subject}) async {
+    final token = url.queryParameters['jwt'];
+    final options = JitsiMeetConferenceOptions(
+      serverURL: url.origin,
+      room: url.pathSegments.join('/'),
+      token: token,
+      configOverrides: {
+        'subject': ?subject,
+      },
+      featureFlags: {
+        'unsaferoomwarning.enabled': false,
+        'prejoinpage.enabled': false,
+      },
+    );
+    await JitsiMeet().join(options);
+  }
+
+  @override
+  Future<bool> supportsCloseForLaunchMode(url_launcher.LaunchMode mode) async {
+    return url_launcher.supportsCloseForLaunchMode(mode);
+  }
+
+  @override
+  Future<void> closeInAppWebView() async {
+    return url_launcher.closeInAppWebView();
+  }
+
+  @override
+  DateTime utcNow() => DateTime.timestamp();
+
+  @override
+  Stopwatch stopwatch() => Stopwatch();
+
+  @override
+  Stream<AppLifecycleState> get appLifecycleStateChanges {
+    // Created lazily, because [AppLifecycleListener] requires
+    // [WidgetsBinding], and this binding is also initialized in a context
+    // that lacks one: the FCM background isolate
+    // (see _initBackgroundIsolate in lib/notifications/receive.dart).
+    return _appLifecycleStateChanges ??= _createAppLifecycleStateChanges();
+  }
+  Stream<AppLifecycleState>? _appLifecycleStateChanges;
+
+  Stream<AppLifecycleState> _createAppLifecycleStateChanges() {
+    final controller = StreamController<AppLifecycleState>.broadcast();
+    // The listener registers itself with [WidgetsBinding];
+    // it's never disposed, because the stream is for the life of the app.
+    AppLifecycleListener(onStateChange: controller.add);
+    return controller.stream;
+  }
+
+  @override
+  Stream<List<connectivity_plus.ConnectivityResult>> get connectivityChanges =>
+    connectivity_plus.Connectivity().onConnectivityChanged;
+
+  @override
+  Future<List<connectivity_plus.ConnectivityResult>> checkConnectivity() =>
+    connectivity_plus.Connectivity().checkConnectivity();
+
+  @override
+  Future<BaseDeviceInfo?> get deviceInfo => _deviceInfo;
+  late Future<BaseDeviceInfo?> _deviceInfo;
+
+  @override
+  BaseDeviceInfo? get syncDeviceInfo => _syncDeviceInfo;
+  BaseDeviceInfo? _syncDeviceInfo;
+
+  Future<BaseDeviceInfo?> _prefetchDeviceInfo() async {
+    try {
+      final info = await device_info_plus.DeviceInfoPlugin().deviceInfo;
+      _syncDeviceInfo = switch (info) {
+        device_info_plus.AndroidDeviceInfo() => AndroidDeviceInfo(release: info.version.release,
+                                                                  sdkInt: info.version.sdkInt),
+        device_info_plus.IosDeviceInfo()     => IosDeviceInfo(systemVersion: info.systemVersion),
+        device_info_plus.MacOsDeviceInfo()   => MacOsDeviceInfo(majorVersion: info.majorVersion,
+                                                                minorVersion: info.minorVersion,
+                                                                patchVersion: info.patchVersion),
+        device_info_plus.WindowsDeviceInfo() => const WindowsDeviceInfo(),
+        device_info_plus.LinuxDeviceInfo()   => LinuxDeviceInfo(name: info.name,
+                                                                versionId: info.versionId),
+        _                                    => throw UnimplementedError(),
+      };
+    } catch (e, st) {
+      assert(debugLog('Failed to prefetch device info: $e\n$st')); // TODO(log)
+    }
+    return _syncDeviceInfo;
+  }
+
+  @override
+  Future<PackageInfo?> get packageInfo => _packageInfo;
+  late Future<PackageInfo?> _packageInfo;
+
+  @override
+  PackageInfo? get syncPackageInfo => _syncPackageInfo;
+  PackageInfo? _syncPackageInfo;
+
+  Future<PackageInfo?> _prefetchPackageInfo() async {
+    try {
+      final info = await package_info_plus.PackageInfo.fromPlatform();
+      _syncPackageInfo = PackageInfo(
+        version: info.version,
+        buildNumber: info.buildNumber,
+        packageName: info.packageName,
+      );
+    } catch (e, st) {
+      assert(debugLog('Failed to prefetch package info: $e\n$st')); // TODO(log)
+    }
+    return _syncPackageInfo;
+  }
+
+  @override
+  FutureOr<Sodium> sodiumInit() => SodiumInit.init();
+
+  @override
+  Future<void> firebaseInitializeApp({
+      required firebase_core.FirebaseOptions options}) {
+    return firebase_core.Firebase.initializeApp(options: options);
+  }
+
+  @override
+  firebase_messaging.FirebaseMessaging get firebaseMessaging {
+    return firebase_messaging.FirebaseMessaging.instance;
+  }
+
+  @override
+  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage {
+    return firebase_messaging.FirebaseMessaging.onMessage;
+  }
+
+  @override
+  void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler) {
+    firebase_messaging.FirebaseMessaging.onBackgroundMessage(handler);
+  }
+
+  @override
+  AndroidNotificationHostApi get androidNotificationHost => AndroidNotificationHostApi();
+
+  @override
+  NotificationPigeonApi get notificationPigeonApi => NotificationPigeonApi();
+
+  @override
+  Stream<android_intents_pigeon.AndroidIntentEvent> get androidIntentEvents => android_intents_pigeon.androidIntentEvents();
+
+  @override
+  void setupIosNotifFlutterApi(IosNotifFlutterApi api) => IosNotifFlutterApi.setUp(api);
+
+  @override
+  Future<file_picker.FilePickerResult?> pickFiles({
+    bool allowMultiple = false,
+    bool withReadStream = false,
+    file_picker.FileType type = file_picker.FileType.any,
+  }) async {
+    return file_picker.FilePicker.pickFiles(
+      allowMultiple: allowMultiple,
+      withReadStream: withReadStream,
+      type: type,
+    );
+  }
+
+  @override
+  Future<image_picker.XFile?> pickImage({
+    required image_picker.ImageSource source,
+    bool requestFullMetadata = true,
+  }) async {
+    return image_picker.ImagePicker()
+      .pickImage(source: source, requestFullMetadata: requestFullMetadata);
+  }
+
+  @override
+  Future<List<image_picker.XFile>> pickMultipleMedia({
+    bool requestFullMetadata = true,
+  }) async {
+    return image_picker.ImagePicker()
+      .pickMultipleMedia(requestFullMetadata: requestFullMetadata);
+  }
+
+  @override
+  Future<void> toggleWakelock({required bool enable}) async {
+    return wakelock_plus.WakelockPlus.toggle(enable: enable);
+  }
+}

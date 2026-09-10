@@ -1,0 +1,465 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+
+import '../api/model/model.dart';
+import '../api/route/messages.dart' show NumericAnchor;
+import '../generated/l10n/zulip_localizations.dart';
+import '../host/notifications.dart';
+import '../log.dart';
+import '../model/binding.dart';
+import '../model/narrow.dart';
+import '../model/store.dart' show Account;
+import '../widgets/app.dart';
+import '../widgets/dialog.dart';
+import '../widgets/home.dart';
+import '../widgets/message_list.dart';
+import '../widgets/page.dart';
+import '../widgets/store.dart';
+
+NotificationPigeonApi get _notifPigeonApi => ZulipBinding.instance.notificationPigeonApi;
+
+/// Responds to the user opening a notification.
+class NotificationOpenService {
+  static NotificationOpenService get instance => (_instance ??= NotificationOpenService._());
+  static NotificationOpenService? _instance;
+
+  NotificationOpenService._();
+
+  /// Reset the state of the [NotificationNavigationService], for testing.
+  static void debugReset() {
+    _instance = null;
+  }
+
+  NotificationDataFromLaunch? _notifDataFromLaunch;
+
+  /// A [Future] that completes to signal that the initialization of
+  /// [NotificationNavigationService] has completed
+  /// (with either success or failure).
+  ///
+  /// Null if [start] hasn't been called.
+  Future<void>? get initialized => _initializedSignal?.future;
+
+  Completer<void>? _initializedSignal;
+
+  Future<void> start() async {
+    assert(_initializedSignal == null);
+    _initializedSignal = Completer<void>();
+    try {
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+          // On iOS, the notification tap that causes a launch of the app is
+          // handled a bit differently than on Android where all types of
+          // notification tap events are served via the
+          // `notificationTapEventsStream`.
+          _notifDataFromLaunch = await _notifPigeonApi.getNotificationDataFromLaunch();
+
+          _notifPigeonApi.notificationTapEventsStream()
+            .listen(_navigateForNotification);
+
+        case TargetPlatform.android:
+          _notifPigeonApi.notificationTapEventsStream()
+            .listen(_navigateForNotification);
+
+        case TargetPlatform.fuchsia:
+        case TargetPlatform.linux:
+        case TargetPlatform.macOS:
+        case TargetPlatform.windows:
+          // Do nothing; we don't offer notifications on these platforms.
+          break;
+      }
+    } finally {
+      _initializedSignal!.complete();
+    }
+  }
+
+  /// Provides the route to open if the app was launched through a tap on
+  /// a notification.
+  ///
+  /// Returns null if app launch wasn't triggered by a notification, or if
+  /// an error occurs while determining the route for the notification.
+  /// In the latter case an error dialog is also shown.
+  ///
+  /// The context argument should be a descendant of the app's main [Navigator].
+  AccountRoute<void>? routeForNotificationFromLaunch({required BuildContext context}) {
+    assert(defaultTargetPlatform == TargetPlatform.iOS);
+    final data = _notifDataFromLaunch;
+    if (data == null) return null;
+    assert(debugLog('opened notif: ${jsonEncode(data.payload)}'));
+
+    final notifNavData = _tryParseIosApnsPayload(context, data.payload);
+    if (notifNavData == null) return null; // TODO(log)
+
+    return routeForNotification(context: context, data: notifNavData);
+  }
+
+  /// Finds the account associated with the given notification.
+  ///
+  /// Returns null and shows an error dialog if the associated account is not
+  /// found in the global store.
+  ///
+  /// The context argument should be a descendant of the app's main [Navigator].
+  static Account? _accountForNotification({
+    required BuildContext context,
+    required NotificationOpenPayload data,
+  }) {
+    final globalStore = GlobalStoreWidget.of(context);
+
+    final account = globalStore.accounts.firstWhereOrNull(
+      (account) => account.realmUrl.origin == data.realmUrl.origin
+                && account.userId == data.userId);
+    if (account == null) { // TODO(log)
+      final zulipLocalizations = ZulipLocalizations.of(context);
+      showErrorDialog(context: context,
+        title: zulipLocalizations.errorNotificationOpenTitle,
+        message: zulipLocalizations.errorNotificationOpenAccountNotFound);
+      return null;
+    }
+    return account;
+  }
+
+  /// Provides the route to open by parsing the notification payload.
+  ///
+  /// Returns null and shows an error dialog if the associated account is not
+  /// found in the global store.
+  ///
+  /// The context argument should be a descendant of the app's main [Navigator].
+  static AccountRoute<void>? routeForNotification({
+    required BuildContext context,
+    required NotificationOpenPayload data,
+  }) {
+    final account = _accountForNotification(context: context, data: data);
+    if (account == null) return null;
+
+    return MessageListPage.buildRoute(
+      accountId: account.id,
+      narrow: data.narrow,
+      initAnchorMessageId: data.messageId);
+  }
+
+  /// Navigate appropriately for opening the given notification.
+  static void _navigateForNotificationPayload(
+      NavigatorState navigator, NotificationOpenPayload data) {
+    assert(navigator.mounted);
+    final context = navigator.context;
+    final navStack = ZulipApp.navigationStack!;
+
+    final account = _accountForNotification(context: context, data: data);
+    if (account == null) return; // TODO(log)
+
+    final currentPageRoute = navStack.currentPageRoute;
+    if (currentPageRoute is MaterialAccountWidgetRoute
+        && currentPageRoute.accountId == account.id
+        && currentPageRoute.page is MessageListPage
+        && switch (MessageListPage.currentNarrow(currentPageRoute)) {
+             TopicNarrow narrow => narrow.isSameAs(data.narrow),
+             Narrow      narrow => narrow == data.narrow,
+           }
+    ) {
+      // The current page is already a MessageListPage at the desired narrow.
+      // Instead of pushing another copy of it, stay there; see #1852.
+
+      // Do dismiss any non-page routes, like dialogs and bottom sheets, though.
+      // That way we're presenting the page directly, like the user asked for
+      // by opening the notification.
+      navigator.popUntil((route) => route is PageRoute);
+
+      final messageId = data.messageId;
+      if (messageId != null) {
+        // TODO: Scroll to the message if it's already nearby,
+        //   instead of fetching the message list afresh anchored there.
+        MessageListPage.stateOfRoute(currentPageRoute)
+          ?.refresh(NumericAnchor(messageId));
+      }
+      return;
+    }
+
+    if (navStack.currentAccountId != account.id) {
+      HomePage.navigate(context, accountId: account.id);
+    }
+    unawaited(navigator.push(MessageListPage.buildRoute(
+      accountId: account.id,
+      narrow: data.narrow,
+      initAnchorMessageId: data.messageId)));
+  }
+
+  /// Navigate appropriately for opening the notification described by
+  /// the given [NotificationTapEvent].
+  static Future<void> _navigateForNotification(NotificationTapEvent event) async {
+    switch (event) {
+      case IosNotificationTapEvent():
+        return _navigateForNotificationIos(event);
+      case AndroidNotificationTapEvent():
+        return _navigateForNotificationAndroid(event);
+    }
+  }
+
+  static Future<void> _navigateForNotificationIos(IosNotificationTapEvent event) async {
+    assert(defaultTargetPlatform == TargetPlatform.iOS);
+    assert(debugLog('opened notif: ${jsonEncode(event.payload)}'));
+
+    NavigatorState navigator = await ZulipApp.navigator;
+    final context = navigator.context;
+    assert(context.mounted);
+    if (!context.mounted) return; // TODO(linter): this is impossible as there's no actual async gap, but the use_build_context_synchronously lint doesn't see that
+
+    final notifNavData = _tryParseIosApnsPayload(context, event.payload);
+    if (notifNavData == null) return; // TODO(log)
+    _navigateForNotificationPayload(navigator, notifNavData);
+  }
+
+  static Future<void> _navigateForNotificationAndroid(AndroidNotificationTapEvent event) async {
+    assert(defaultTargetPlatform == TargetPlatform.android);
+
+    final url = Uri.tryParse(event.dataUrl);
+    if (url == null) return; // TODO(log)
+    assert(debugLog('opened notif: url: $url'));
+
+    NavigatorState navigator = await ZulipApp.navigator;
+    final context = navigator.context;
+    assert(context.mounted);
+    if (!context.mounted) return; // TODO(linter): this is impossible as there's no actual async gap, but the use_build_context_synchronously lint doesn't see that
+
+    assert(url.scheme == 'zulip' && url.host == 'notification');
+    final data = _tryParseAndroidNotificationUrl(context: context, url: url);
+    if (data == null) return; // TODO(log)
+    _navigateForNotificationPayload(navigator, data);
+  }
+
+  static NotificationOpenPayload? _tryParseIosApnsPayload(
+    BuildContext context,
+    Map<Object?, Object?> payload,
+  ) {
+    try {
+      return NotificationOpenPayload.parseIosApnsPayload(payload);
+    } catch (e, st) {
+      assert(debugLog('$e\n$st'));
+      // Presumably a legacy, non-E2EE payload.
+    }
+
+    // TODO(server-12) simplify by removing legacy payload case.
+    try {
+      return NotificationOpenPayload.parseLegacyIosApnsPayload(payload);
+    } on FormatException catch (e, st) {
+      assert(debugLog('$e\n$st'));
+      final zulipLocalizations = ZulipLocalizations.of(context);
+      showErrorDialog(context: context,
+        title: zulipLocalizations.errorNotificationOpenTitle);
+      return null;
+    }
+  }
+
+  static NotificationOpenPayload? _tryParseAndroidNotificationUrl({
+    required BuildContext context,
+    required Uri url,
+  }) {
+    try {
+      return NotificationOpenPayload.parseNotificationUrl(url);
+    } on FormatException catch (e, st) {
+      assert(debugLog('$e\n$st'));
+      final zulipLocalizations = ZulipLocalizations.of(context);
+      showErrorDialog(context: context,
+        title: zulipLocalizations.errorNotificationOpenTitle);
+      return null;
+    }
+  }
+}
+
+/// The data from a notification that describes what to do
+/// when the user opens the notification.
+class NotificationOpenPayload {
+  final Uri realmUrl;
+  final int userId;
+  final Narrow narrow;
+
+  /// The message to open the message list at,
+  /// or null to open at its default anchor.
+  ///
+  /// When a notification represents several messages in a conversation,
+  /// this is the earliest of them,
+  /// so that opening the notification shows the whole batch (#1565).
+  ///
+  /// Null when the notification doesn't identify a message:
+  /// from iOS (TODO(#1565)),
+  /// or from a notification created before this field existed.
+  final int? messageId;
+
+  NotificationOpenPayload({
+    required this.realmUrl,
+    required this.userId,
+    required this.narrow,
+    required this.messageId,
+  });
+
+  /// A key to set the notification URL (created via [buildNotificationUrl]) in
+  /// [ImprovedNotificationContent.userInfo] map, on iOS.
+  ///
+  /// We use this to determine which conversation to open by reading the
+  /// custom `userInfo` map of the tapped notification (in
+  /// [NotificationOpenService] above).
+  static const kIosNotificationUrlKey = 'notification_url';
+
+  /// Parses the iOS APNs payload and retrieves the information
+  /// required for navigation.
+  factory NotificationOpenPayload.parseIosApnsPayload(Map<Object?, Object?> payload) {
+    if (payload case {
+      // This is an internal URL added by the IosNotificationService
+      // (see lib/notifications/ios_service.dart).
+      kIosNotificationUrlKey: final String notificationUrl,
+    }) {
+      final url = Uri.tryParse(notificationUrl);
+      if (url == null) throw const FormatException();
+
+      return NotificationOpenPayload.parseNotificationUrl(url);
+    } else {
+      // TODO(dart): simplify after https://github.com/dart-lang/language/issues/2537
+      throw const FormatException();
+    }
+  }
+
+  /// Parses the legacy iOS APNs payload and retrieves the information
+  /// required for navigation.
+  factory NotificationOpenPayload.parseLegacyIosApnsPayload(Map<Object?, Object?> payload) {
+    if (payload case {
+      'zulip': {
+        'user_id': final int userId,
+        'sender_id': final int senderId,
+      } && final zulipData,
+    }) {
+      final eventType = zulipData['event'];
+      if (eventType != null && eventType != 'message') {
+        // On Android, we also receive "remove" notification messages, tagged
+        // with an `event` field with value 'remove'. As of Zulip Server 10,
+        // however, these are not yet sent to iOS devices, and we don't have a
+        // way to handle them even if they were.
+        //
+        // The messages we currently do receive, and can handle, are analogous
+        // to Android notification messages of event type 'message'. On the
+        // assumption that some future version of the Zulip server will send
+        // explicit event types in APNs messages, accept messages with that
+        // `event` value, but no other.
+        throw const FormatException();
+      }
+
+      final realmUrl = switch (zulipData) {
+        {'realm_url': final String value} => value,
+        {'realm_uri': final String value} => value,
+        _ => throw const FormatException(),
+      };
+
+      final narrow = switch (zulipData) {
+        {
+          'recipient_type': 'stream',
+          'stream_id': final int streamId,
+          'topic': final String topic,
+        } =>
+          TopicNarrow(streamId, TopicName(topic)),
+
+        {'recipient_type': 'private', 'pm_users': final String pmUsers} =>
+          DmNarrow(
+            allRecipientIds: pmUsers
+              .split(',')
+              .map((e) => int.parse(e, radix: 10))
+              .toList(growable: false)
+              ..sort(),
+            selfUserId: userId),
+
+        {'recipient_type': 'private'} =>
+          DmNarrow.withUser(senderId, selfUserId: userId),
+
+        _ => throw const FormatException(),
+      };
+
+      return NotificationOpenPayload(
+        realmUrl: Uri.parse(realmUrl),
+        userId: userId,
+        narrow: narrow,
+        messageId: null);
+    } else {
+      // TODO(dart): simplify after https://github.com/dart-lang/language/issues/2537
+      throw const FormatException();
+    }
+  }
+
+  /// Parses the internal notification URL that was created using
+  /// [buildNotificationUrl], and retrieves the information required
+  /// for navigation.
+  factory NotificationOpenPayload.parseNotificationUrl(Uri url) {
+    if (url case Uri(
+      scheme: 'zulip',
+      host: 'notification',
+      queryParameters: {
+        'realm_url': var realmUrlStr,
+        'user_id': var userIdStr,
+        'narrow_type': var narrowType,
+        // In case of narrowType == 'topic':
+        // 'channel_id' and 'topic' handled below.
+
+        // In case of narrowType == 'dm':
+        // 'all_recipient_ids' handled below.
+      },
+    )) {
+      final realmUrl = Uri.parse(realmUrlStr);
+      final userId = int.parse(userIdStr, radix: 10);
+
+      final Narrow narrow;
+      switch (narrowType) {
+        case 'topic':
+          final channelIdStr = url.queryParameters['channel_id']!;
+          final channelId = int.parse(channelIdStr, radix: 10);
+          final topicStr = url.queryParameters['topic']!;
+          narrow = TopicNarrow(channelId, TopicName(topicStr));
+        case 'dm':
+          final allRecipientIdsStr = url.queryParameters['all_recipient_ids']!;
+          final allRecipientIds = allRecipientIdsStr.split(',')
+            .map((idStr) => int.parse(idStr, radix: 10))
+            .toList(growable: false);
+          narrow = DmNarrow(allRecipientIds: allRecipientIds, selfUserId: userId);
+        default:
+          throw const FormatException();
+      }
+
+      final messageId = switch (url.queryParameters['message_id']) {
+        final messageIdStr? => int.parse(messageIdStr, radix: 10),
+        null => null,
+      };
+
+      return NotificationOpenPayload(
+        realmUrl: realmUrl,
+        userId: userId,
+        narrow: narrow,
+        messageId: messageId,
+      );
+    } else {
+      // TODO(dart): simplify after https://github.com/dart-lang/language/issues/2537
+      throw const FormatException();
+    }
+  }
+
+  Uri buildNotificationUrl() {
+    return Uri(
+      scheme: 'zulip',
+      host: 'notification',
+      queryParameters: <String, String>{
+        'realm_url': realmUrl.toString(),
+        'user_id': userId.toString(),
+        ...(switch (narrow) {
+          TopicNarrow(:var channelId, :var topic) => {
+            'narrow_type': 'topic',
+            'channel_id': channelId.toString(),
+            'topic': topic.apiName,
+          },
+          DmNarrow(:var allRecipientIds) => {
+            'narrow_type': 'dm',
+            'all_recipient_ids': allRecipientIds.join(','),
+          },
+          _ => throw UnsupportedError('Found an unexpected Narrow of type ${narrow.runtimeType}.'),
+        }),
+        if (messageId != null) 'message_id': messageId.toString(),
+      },
+    );
+  }
+}
