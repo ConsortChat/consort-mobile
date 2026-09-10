@@ -1,4 +1,4 @@
-package com.zulip.flutter.notifications
+package chat.consort.mobile.notifications
 
 import android.content.Intent
 import android.net.Uri

@@ -1,8 +1,8 @@
-package com.zulip.flutter
+package chat.consort.mobile
 
 import android.content.Intent
-import com.zulip.flutter.notifications.NotificationTapEventListener
-import com.zulip.flutter.notifications.NotificationTapEventsStreamHandler
+import chat.consort.mobile.notifications.NotificationTapEventListener
+import chat.consort.mobile.notifications.NotificationTapEventsStreamHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import org.unifiedpush.flutter.connector.Plugin as UnifiedPushPlugin

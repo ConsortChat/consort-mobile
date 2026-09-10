@@ -4,8 +4,8 @@ import 'package:pigeon/pigeon.dart';
 // run `tools/check pigeon --fix`.
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/host/android_notifications.g.dart',
-  kotlinOut: 'android/app/src/main/kotlin/com/zulip/flutter/AndroidNotifications.g.kt',
-  kotlinOptions: KotlinOptions(package: 'com.zulip.flutter'),
+  kotlinOut: 'android/app/src/main/kotlin/chat/consort/mobile/AndroidNotifications.g.kt',
+  kotlinOptions: KotlinOptions(package: 'chat.consort.mobile'),
 ))
 
 /// Corresponds to `androidx.core.app.NotificationChannelCompat`

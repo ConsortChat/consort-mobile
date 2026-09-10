@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace "com.zulip.flutter"
+    namespace "chat.consort.mobile"
 
     // This Gradle project is an empty placeholder that contains no actual code,
     // so the settings below have no real effect.  The Gradle project exists only

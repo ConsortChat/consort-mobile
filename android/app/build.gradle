@@ -27,7 +27,7 @@ try {
 }
 
 android {
-    namespace "com.zulip.flutter"
+    namespace "chat.consort.mobile"
 
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion "28.2.13676358"
@@ -42,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zulipmobile"
+        applicationId "chat.consort.mobile"
         minSdkVersion 26
         targetSdkVersion flutter.targetSdkVersion
         // These are synced to local.properties from pubspec.yaml by the flutter tool.

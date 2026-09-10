@@ -246,6 +246,6 @@ flutter:
 patrol:
   app_name: Consort
   android:
-    package_name: com.zulipmobile
+    package_name: chat.consort.mobile
   ios:
     bundle_id: org.zulip.Zulip

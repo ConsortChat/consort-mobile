@@ -1,4 +1,4 @@
-package com.zulip.flutter
+package chat.consort.mobile
 
 import android.annotation.SuppressLint
 import android.content.ContentUris

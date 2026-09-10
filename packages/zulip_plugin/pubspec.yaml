@@ -51,5 +51,5 @@ flutter:
         # lives in the app code, because the `flutter` tool expects
         # the class named in `pluginClass` to live within this package.
         # So we have here a shim plugin that forwards to the real ZulipPlugin.
-        package: com.zulip.flutter
+        package: chat.consort.mobile
         pluginClass: ZulipShimPlugin

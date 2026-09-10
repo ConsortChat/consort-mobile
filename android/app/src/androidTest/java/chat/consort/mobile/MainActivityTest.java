@@ -1,4 +1,4 @@
-package com.zulip.flutter;
+package chat.consort.mobile;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 import org.junit.Test;

@@ -1,4 +1,4 @@
-package com.zulip.flutter
+package chat.consort.mobile
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import java.lang.reflect.Constructor
@@ -34,7 +34,7 @@ class ZulipShimPlugin : FlutterPlugin {
             //
             // Lacking a compile-time dependency, we instead use reflection
             // to find ZulipPlugin.
-            val pluginClass = Class.forName("com.zulip.flutter.ZulipPlugin")
+            val pluginClass = Class.forName("chat.consort.mobile.ZulipPlugin")
             @Suppress("UNCHECKED_CAST")
             (pluginClass as Class<FlutterPlugin>).getConstructor()
         }

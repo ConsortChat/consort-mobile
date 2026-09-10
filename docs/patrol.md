@@ -186,7 +186,7 @@ relative to Patrol starting the app for testing.
 To work around the issue, uninstall the app explicitly before starting
 Patrol.  For example:
 ```
-$ adb uninstall com.zulipmobile; patrol develop -t patrol_test/example_test.dart
+$ adb uninstall chat.consort.mobile; patrol develop -t patrol_test/example_test.dart
 ```
 
 

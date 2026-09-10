@@ -1319,7 +1319,7 @@ void main() {
             utf8.encode('asdf'),
             name: 'image.jpg',
             length: 12345,
-            path: '/data/user/0/com.zulipmobile/cache/image.jpg',
+            path: '/data/user/0/chat.consort.mobile/cache/image.jpg',
           )];
           connection.prepare(delay: const Duration(seconds: 1), json:
             UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
@@ -1362,13 +1362,13 @@ void main() {
               utf8.encode('asdf'),
               name: 'image.jpg',
               length: 12345,
-              path: '/data/user/0/com.zulipmobile/cache/image.jpg'),
+              path: '/data/user/0/chat.consort.mobile/cache/image.jpg'),
             XFile.fromData(
               mimeType: 'image/gif',
               utf8.encode('asdf'),
               name: 'test.gif',
               length: 12345,
-              path: '/data/user/0/com.zulipmobile/cache/test.gif'),
+              path: '/data/user/0/chat.consort.mobile/cache/test.gif'),
           ];
           connection.prepare(delay: const Duration(seconds: 1), json:
             UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
@@ -1410,8 +1410,8 @@ void main() {
               utf8.encode('asdf'),
               name: 'image.jpg',
               length: 12345,
-              path: '/data/user/0/com.zulipmobile/cache/image.jpg'),
-            _UnreadableXFile('/data/user/0/com.zulipmobile/cache/missing.jpg'),
+              path: '/data/user/0/chat.consort.mobile/cache/image.jpg'),
+            _UnreadableXFile('/data/user/0/chat.consort.mobile/cache/missing.jpg'),
           ];
           connection.prepare(json:
             UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());

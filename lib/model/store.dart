@@ -1243,7 +1243,7 @@ class LiveGlobalStore extends GlobalStore {
         // What directory should we use on other platforms?
         //   path_provider's getApplicationSupportDirectory:
         //     on Android, -> Flutter's PathUtils.getFilesDir -> https://developer.android.com/reference/android/content/Context#getFilesDir()
-        //       -> empirically /data/data/com.zulipmobile/files/
+        //       -> empirically /data/data/chat.consort.mobile/files/
         //     on Linux, -> "${XDG_DATA_HOME:-~/.local/share}/com.zulip.flutter/"
         //     Both seem reasonable.
         //   path_provider's getApplicationDocumentsDirectory:

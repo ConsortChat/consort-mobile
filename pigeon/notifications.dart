@@ -5,8 +5,8 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/host/notifications.g.dart',
   swiftOut: 'ios/Runner/Notifications.g.swift',
-  kotlinOut: 'android/app/src/main/kotlin/com/zulip/flutter/notifications/Notifications.g.kt',
-  kotlinOptions: KotlinOptions(package: 'com.zulip.flutter.notifications'),
+  kotlinOut: 'android/app/src/main/kotlin/chat/consort/mobile/notifications/Notifications.g.kt',
+  kotlinOptions: KotlinOptions(package: 'chat.consort.mobile.notifications'),
 ))
 
 class NotificationDataFromLaunch {
