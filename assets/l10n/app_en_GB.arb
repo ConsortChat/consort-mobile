@@ -16,7 +16,7 @@
   },
   "aboutPageAppVersion": "App Version",
   "aboutPageOpenSourceLicenses": "Open-source licences",
-  "aboutPageTitle": "About Zulip",
+  "aboutPageTitle": "About Consort",
   "topicValidationErrorMandatoryButEmpty": "Topics are required in this organisation.",
-  "upgradeWelcomeDialogTitle": "Welcome to the new Zulip app!"
+  "upgradeWelcomeDialogTitle": "Welcome to the new Consort app!"
 }

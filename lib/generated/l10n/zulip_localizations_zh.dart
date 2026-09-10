@@ -10,7 +10,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   ZulipLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get aboutPageTitle => 'About Zulip';
+  String get aboutPageTitle => 'About Consort';
 
   @override
   String get aboutPageAppVersion => 'App version';
@@ -26,7 +26,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get aboutPageOpenSourceLicenses => 'Open-source licenses';
 
   @override
-  String get upgradeWelcomeDialogTitle => 'Welcome to the new Zulip app!';
+  String get upgradeWelcomeDialogTitle => 'Welcome to the new Consort app!';
 
   @override
   String get upgradeWelcomeDialogMessage =>
@@ -96,11 +96,11 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get permissionsDeniedCameraAccess =>
-      'To upload an image, please grant Zulip additional permissions in Settings.';
+      'To upload an image, please grant Consort additional permissions in Settings.';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      'To upload files, please grant Zulip additional permissions in Settings.';
+      'To upload files, please grant Consort additional permissions in Settings.';
 
   @override
   String get actionSheetOptionSubscribe => 'Subscribe';
@@ -438,16 +438,16 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get errorConnectingToServerShort =>
-      'Error connecting to Zulip. Retrying…';
+      'Error connecting to Consort. Retrying…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return 'Error connecting to Zulip at $serverUrl. Will retry:\n\n$error';
+    return 'Error connecting to Consort at $serverUrl. Will retry:\n\n$error';
   }
 
   @override
   String get errorHandlingEventTitle =>
-      'Error handling a Zulip event. Retrying connection…';
+      'Error handling a Consort event. Retrying connection…';
 
   @override
   String errorHandlingEventDetails(
@@ -455,7 +455,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
     String error,
     String event,
   ) {
-    return 'Error handling a Zulip event from $serverUrl; will retry.\n\nError: $error\n\nEvent: $event';
+    return 'Error handling a Consort event from $serverUrl; will retry.\n\nError: $error\n\nEvent: $event';
   }
 
   @override
@@ -685,7 +685,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get emptyMessageListSelfDmMessage =>
-      'Use this space for personal notes, or to test out Zulip features.';
+      'Use this space for personal notes, or to test out Consort features.';
 
   @override
   String emptyMessageListDm(String person) {
@@ -801,11 +801,11 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Add an account';
 
   @override
-  String get loginRealmUrlLabel => 'Your Zulip organization URL';
+  String get loginRealmUrlLabel => 'Your Consort organization URL';
 
   @override
   String get loginRealmUrlHelperText =>
-      'This is the address you would use to open Zulip in a browser.';
+      'This is the address you would use to open Consort in a browser.';
 
   @override
   String get loginRealmUrlHelpButton => 'Help';
@@ -1387,7 +1387,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      'These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Zulip.';
+      'These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Consort.';
 
   @override
   String get errorNotificationOpenTitle => 'Failed to open notification';
@@ -1428,7 +1428,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get scrollToBottomTooltip => 'Scroll to bottom';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader => 'There are no topics here yet.';
@@ -1439,7 +1439,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   ZulipLocalizationsZhHansCn() : super('zh_Hans_CN');
 
   @override
-  String get aboutPageTitle => '关于 Zulip';
+  String get aboutPageTitle => '关于 Consort';
 
   @override
   String get aboutPageAppVersion => 'App 版本';
@@ -1448,7 +1448,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get aboutPageOpenSourceLicenses => '开源许可';
 
   @override
-  String get upgradeWelcomeDialogTitle => '欢迎来到新的 Zulip 应用程序！';
+  String get upgradeWelcomeDialogTitle => '欢迎来到新的 Consort 应用程序！';
 
   @override
   String get upgradeWelcomeDialogMessage => '您将在更快、更流畅的版本中享受熟悉的体验。';
@@ -1513,11 +1513,11 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get permissionsNeededOpenSettings => '打开设置';
 
   @override
-  String get permissionsDeniedCameraAccess => '上传图片前，请在设置中授予 Zulip 相应的权限。';
+  String get permissionsDeniedCameraAccess => '上传图片前，请在设置中授予 Consort 相应的权限。';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      '上传文件前，请在设置中授予 Zulip 相应的权限。';
+      '上传文件前，请在设置中授予 Consort 相应的权限。';
 
   @override
   String get actionSheetOptionSubscribe => '订阅';
@@ -1787,15 +1787,15 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   }
 
   @override
-  String get errorConnectingToServerShort => '未能连接到 Zulip. 重试中…';
+  String get errorConnectingToServerShort => '未能连接到 Consort. 重试中…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return '未能连接到在 $serverUrl 的 Zulip 服务器。即将重连：\n\n$error';
+    return '未能连接到在 $serverUrl 的 Consort 服务器。即将重连：\n\n$error';
   }
 
   @override
-  String get errorHandlingEventTitle => '处理 Zulip 事件时发生了一些问题。即将重连…';
+  String get errorHandlingEventTitle => '处理 Consort 事件时发生了一些问题。即将重连…';
 
   @override
   String errorHandlingEventDetails(
@@ -1803,7 +1803,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
     String error,
     String event,
   ) {
-    return '处理来自 $serverUrl 的 Zulip 事件时发生了一些问题。即将重连。\n\n错误：$error\n\n事件：$event';
+    return '处理来自 $serverUrl 的 Consort 事件时发生了一些问题。即将重连。\n\n错误：$error\n\n事件：$event';
   }
 
   @override
@@ -2561,7 +2561,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get scrollToBottomTooltip => '拖动到最底';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 }
 
 /// The translations for Chinese, as used in Taiwan, using the Han script (`zh_Hant_TW`).
@@ -2569,7 +2569,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   ZulipLocalizationsZhHantTw() : super('zh_Hant_TW');
 
   @override
-  String get aboutPageTitle => '關於 Zulip';
+  String get aboutPageTitle => '關於 Consort';
 
   @override
   String get aboutPageAppVersion => 'App 版本';
@@ -2578,7 +2578,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get aboutPageOpenSourceLicenses => '開源授權條款';
 
   @override
-  String get upgradeWelcomeDialogTitle => '歡迎使用新的 Zulip 應用程式！';
+  String get upgradeWelcomeDialogTitle => '歡迎使用新的 Consort 應用程式！';
 
   @override
   String get upgradeWelcomeDialogMessage => '您將在更快、更流暢的版本中享受熟悉的體驗。';
@@ -2644,11 +2644,11 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get permissionsNeededOpenSettings => '開啟設定';
 
   @override
-  String get permissionsDeniedCameraAccess => '要上傳圖片，請在設定中授予 Zulip 額外權限。';
+  String get permissionsDeniedCameraAccess => '要上傳圖片，請在設定中授予 Consort 額外權限。';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      '要上傳檔案，請在設定中授予 Zulip 額外權限。';
+      '要上傳檔案，請在設定中授予 Consort 額外權限。';
 
   @override
   String get actionSheetOptionSubscribe => '訂閱';
@@ -2911,15 +2911,15 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   }
 
   @override
-  String get errorConnectingToServerShort => '連線 Zulip 時發生錯誤。重試中…';
+  String get errorConnectingToServerShort => '連線 Consort 時發生錯誤。重試中…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return '連線 Zulip $serverUrl 時發生錯誤。將重試：\n\n$error';
+    return '連線 Consort $serverUrl 時發生錯誤。將重試：\n\n$error';
   }
 
   @override
-  String get errorHandlingEventTitle => '處理 Zulip 事件時發生錯誤。重新連線中…';
+  String get errorHandlingEventTitle => '處理 Consort 事件時發生錯誤。重新連線中…';
 
   @override
   String errorHandlingEventDetails(
@@ -2927,7 +2927,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
     String error,
     String event,
   ) {
-    return '處理來自 $serverUrl 的 Zulip 事件時發生錯誤；將重試。\n\n錯誤：$error\n\n事件：$event';
+    return '處理來自 $serverUrl 的 Consort 事件時發生錯誤；將重試。\n\n錯誤：$error\n\n事件：$event';
   }
 
   @override
@@ -3142,7 +3142,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get emptyMessageListSelfDmHeader => '您尚未傳送任何私人訊息給自己！';
 
   @override
-  String get emptyMessageListSelfDmMessage => '使用此空間記錄個人筆記，或測試 Zulip 功能。';
+  String get emptyMessageListSelfDmMessage => '使用此空間記錄個人筆記，或測試 Consort 功能。';
 
   @override
   String emptyMessageListDm(String person) {
@@ -3758,7 +3758,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      '這些選項啟用的功能仍在開發中，尚未完善。它們可能無法正常運作，且可能導致應用程式其他部分出現問題。\n\n這些設定的目的是供參與 Zulip 開發的人員進行試驗使用。';
+      '這些選項啟用的功能仍在開發中，尚未完善。它們可能無法正常運作，且可能導致應用程式其他部分出現問題。\n\n這些設定的目的是供參與 Consort 開發的人員進行試驗使用。';
 
   @override
   String get errorNotificationOpenTitle => '無法開啟通知';
@@ -3797,7 +3797,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get scrollToBottomTooltip => '捲動至底部';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader => '這裡還沒有任何話題。';

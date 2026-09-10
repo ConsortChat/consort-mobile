@@ -10,7 +10,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
   ZulipLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get aboutPageTitle => 'À propos de Zulip';
+  String get aboutPageTitle => 'À propos de Consort';
 
   @override
   String get aboutPageAppVersion => 'Version de l\'application';
@@ -27,7 +27,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String get upgradeWelcomeDialogTitle =>
-      'Bienvenue dans la nouvelle application Zulip !';
+      'Bienvenue dans la nouvelle application Consort !';
 
   @override
   String get upgradeWelcomeDialogMessage =>
@@ -98,11 +98,11 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String get permissionsDeniedCameraAccess =>
-      'Pour charger une image, merci d\'accorder des autorisations supplémentaires à Zulip, dans les Paramètres.';
+      'Pour charger une image, merci d\'accorder des autorisations supplémentaires à Consort, dans les Paramètres.';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      'Pour téléverser des fichiers, merci d\'accorder des autorisations supplémentaires à Zulip, dans les Paramètres.';
+      'Pour téléverser des fichiers, merci d\'accorder des autorisations supplémentaires à Consort, dans les Paramètres.';
 
   @override
   String get actionSheetOptionSubscribe => 'S\'abonner';
@@ -460,12 +460,12 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return 'Une erreur s\'est produite lors de la connexion à Zulip sur $serverUrl. Nouvelle tentative imminente :\n\n$error';
+    return 'Une erreur s\'est produite lors de la connexion à Consort sur $serverUrl. Nouvelle tentative imminente :\n\n$error';
   }
 
   @override
   String get errorHandlingEventTitle =>
-      'Erreur lors du traitement d\'un événement Zulip. Nouvel essai…';
+      'Erreur lors du traitement d\'un événement Consort. Nouvel essai…';
 
   @override
   String errorHandlingEventDetails(
@@ -473,7 +473,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
     String error,
     String event,
   ) {
-    return 'Une erreur s\'est produite en traitant un événement Zulip de $serverUrl ; nouvel essai à venir.\n\nErreur : $error\n\nÉvénement : $event';
+    return 'Une erreur s\'est produite en traitant un événement Consort de $serverUrl ; nouvel essai à venir.\n\nErreur : $error\n\nÉvénement : $event';
   }
 
   @override
@@ -712,7 +712,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String get emptyMessageListSelfDmMessage =>
-      'Utilisez cet espace pour des notes personnelles, ou pour tester les fonctionnalités de Zulip.';
+      'Utilisez cet espace pour des notes personnelles, ou pour tester les fonctionnalités de Consort.';
 
   @override
   String emptyMessageListDm(String person) {
@@ -831,11 +831,11 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String get loginRealmUrlLabel =>
-      'L\'adresse (URL) de Zulip pour votre organisation';
+      'L\'adresse (URL) de Consort pour votre organisation';
 
   @override
   String get loginRealmUrlHelperText =>
-      'Ceci est l\'adresse que vous utiliseriez pour ouvrir Zulip dans un navigateur.';
+      'Ceci est l\'adresse que vous utiliseriez pour ouvrir Consort dans un navigateur.';
 
   @override
   String get loginRealmUrlHelpButton => 'Aide';
@@ -1431,7 +1431,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      'Ces paramètres activent des fonctionnalités qui sont encore en développement et donc non finalisées. Elles peuvent ne pas fonctionner, ou causer des problèmes dans d\'autres parties de l\'application.\n\nCes paramètres permettent aux personnes qui développent Zulip de tester ces fonctionnalités.';
+      'Ces paramètres activent des fonctionnalités qui sont encore en développement et donc non finalisées. Elles peuvent ne pas fonctionner, ou causer des problèmes dans d\'autres parties de l\'application.\n\nCes paramètres permettent aux personnes qui développent Consort de tester ces fonctionnalités.';
 
   @override
   String get errorNotificationOpenTitle =>
@@ -1475,7 +1475,7 @@ class ZulipLocalizationsFr extends ZulipLocalizations {
   String get scrollToBottomTooltip => 'Défiler jusqu\'en bas';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader =>

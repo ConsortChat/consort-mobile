@@ -22,7 +22,7 @@ ThemeData zulipThemeData(BuildContext context) {
 
   // This applies Material 3's color system to produce a palette of
   // appropriately matching and contrasting colors for use in a UI.
-  // The Zulip brand color is a starting point, but doesn't end up as
+  // The Consort brand color is a starting point, but doesn't end up as
   // one that's directly used.  (After all, we didn't design it for that
   // purpose; we designed a logo.)  See docs:
   //   https://api.flutter.dev/flutter/material/ColorScheme/ColorScheme.fromSeed.html
@@ -30,7 +30,7 @@ ThemeData zulipThemeData(BuildContext context) {
   //   https://m3.material.io/theme-builder#/custom
   final colorScheme = ColorScheme.fromSeed(
     brightness: brightness,
-    seedColor: kZulipBrandColor);
+    seedColor: kConsortBrandColor);
 
   switch (brightness) {
     case Brightness.light: {
@@ -127,11 +127,10 @@ ThemeData zulipThemeData(BuildContext context) {
   );
 }
 
-/// The Zulip "brand color", a purplish blue.
+/// The Consort brand color, a teal.
 ///
-/// This is chosen as the sRGB midpoint of the Zulip logo's gradient.
-// As computed by Anders: https://github.com/zulip/zulip-mobile/pull/4467
-const kZulipBrandColor = Color.fromRGBO(0x64, 0x92, 0xfe, 1);
+/// This is the sRGB midpoint of the Consort logo's gradient.
+const kConsortBrandColor = Color.fromRGBO(0x1e, 0xa4, 0xa8, 1);
 
 /// Design variables, mainly from the Figma design.
 ///
@@ -182,24 +181,24 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     contextMenuBg: const Color(0xffffffff), // grey/900
     contextMenuBorder: const Color(0xff9ea1ae), // grey/350
     contextMenuCancelText: const Color(0xff222222),
-    contextMenuItemBg: const Color(0xff6159e1),
+    contextMenuItemBg: const Color(0xff1ea4a8),
     contextMenuItemBgDanger: const Color(0xffc0070a), // TODO(#831) red/550
-    contextMenuItemIcon: const Color(0xff4f42c9),
+    contextMenuItemIcon: const Color(0xff0e7490),
     contextMenuItemIconDanger: const Color(0xffac0508), // TODO(#831) red/600
     contextMenuItemLabel: const Color(0xff242631),
     contextMenuItemMeta: const Color(0xff626573),
-    contextMenuItemText: const Color(0xff381da7),
+    contextMenuItemText: const Color(0xff0e7490),
     contextMenuItemTextDanger: const Color(0xffac0508), // TODO(#831) red/600
     editorButtonPressedBg: Colors.black.withValues(alpha: 0.06),
-    fabBg: const Color(0xff6e69f3),
-    fabBgPressed: const Color(0xff6159e1),
-    fabLabel: const Color(0xfff1f3fe),
-    fabLabelPressed: const Color(0xffeceefc),
-    fabShadow: const Color(0xff2b0e8a).withValues(alpha: 0.4),
+    fabBg: const Color(0xff1ea4a8),
+    fabBgPressed: const Color(0xff0e7490),
+    fabLabel: const Color(0xffffffff),
+    fabLabelPressed: const Color(0xffffffff),
+    fabShadow: const Color(0xff0e7490).withValues(alpha: 0.4),
     folderText: const Color(0xff596680),
     foreground: const Color(0xff000000),
-    groupIcon: const Color(0xff7199fe), // blue/350
-    icon: const Color(0xff6159e1),
+    groupIcon: const Color(0xff1ea4a8),
+    icon: const Color(0xff0e7490),
     iconSelected: const Color(0xff222222),
     labelCounterQuantity: const Color(0xff222222).withValues(alpha: 0.6),
     labelCounterUnread: const Color(0xff1a1a1a),
@@ -220,7 +219,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     neutralButtonBg: const Color(0xff8c84ae),
     neutralButtonLabel: const Color(0xff433d5c),
     radioBorder: Color(0xffbbbdc8),
-    radioFillSelected: Color(0xff4370f0),
+    radioFillSelected: Color(0xff0e7490),
     statusAway: Color(0xff73788c).withValues(alpha: 0.25),
 
     // Following Web because it uses a gradient, to distinguish it by shape from
@@ -294,24 +293,24 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     contextMenuBg: const Color(0xff11131e),
     contextMenuBorder: const Color(0xff444754), // grey/650
     contextMenuCancelText: const Color(0xffffffff).withValues(alpha: 0.75),
-    contextMenuItemBg: const Color(0xff7977fe),
+    contextMenuItemBg: const Color(0xff2dd4bf),
     contextMenuItemBgDanger: const Color(0xffe1392e), // TODO(#831) red/450
-    contextMenuItemIcon: const Color(0xff9398fd),
+    contextMenuItemIcon: const Color(0xff5eead4),
     contextMenuItemIconDanger: const Color(0xfffd7465), // TODO(#831) red/300
     contextMenuItemLabel: const Color(0xffdfe1e8),
     contextMenuItemMeta: const Color(0xff9194a3),
-    contextMenuItemText: const Color(0xff9398fd),
+    contextMenuItemText: const Color(0xff5eead4),
     contextMenuItemTextDanger: const Color(0xfffd7465), // TODO(#831) red/300
     editorButtonPressedBg: Colors.white.withValues(alpha: 0.06),
-    fabBg: const Color(0xff4f42c9),
-    fabBgPressed: const Color(0xff4331b8),
-    fabLabel: const Color(0xffeceefc),
-    fabLabelPressed: const Color(0xffeceefc),
+    fabBg: const Color(0xff1ea4a8),
+    fabBgPressed: const Color(0xff0e7490),
+    fabLabel: const Color(0xffffffff),
+    fabLabelPressed: const Color(0xffffffff),
     fabShadow: const Color(0xff18171c),
     folderText: const Color(0xff8793ab),
     foreground: const Color(0xffffffff),
-    groupIcon: const Color(0xff84a8fd), // blue/300
-    icon: const Color(0xff7977fe),
+    groupIcon: const Color(0xff5eead4),
+    icon: const Color(0xff2dd4bf),
     iconSelected: Colors.white.withValues(alpha: 0.8),
     labelCounterQuantity: const Color(0xffffffff).withValues(alpha: 0.7),
     labelCounterUnread: const Color(0xffffffff).withValues(alpha: 0.95),
@@ -332,7 +331,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     neutralButtonBg: const Color(0xffd4d1e0),
     neutralButtonLabel: const Color(0xffa9a3c2),
     radioBorder: Color(0xff626573),
-    radioFillSelected: Color(0xff4e7cfa),
+    radioFillSelected: Color(0xff2dd4bf),
     statusAway: Color(0xffabaeba).withValues(alpha: 0.30),
 
     // Following Web because it uses a gradient, to distinguish it by shape from

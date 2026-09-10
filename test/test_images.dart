@@ -66,7 +66,7 @@ class FakeImageHttpClientResponse extends Fake implements HttpClientResponse {
   }
 }
 
-/// A 100x100 PNG image of solid Zulip blue, [kZulipBrandColor].
+/// A 100x100 PNG image of solid Zulip blue.
 // Made from the following SVG:
 //   <svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1">
 //     <rect style="fill:#6492fe;fill-opacity:1" width="1" height="1" x="0" y="0" />

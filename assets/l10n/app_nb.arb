@@ -46,7 +46,7 @@
   },
   "aboutPageAppVersion": "App versjon",
   "aboutPageOpenSourceLicenses": "Lisenser for åpen kildekode",
-  "aboutPageTitle": "Om Zulip",
+  "aboutPageTitle": "Om Consort",
   "allChannelsEmptyPlaceholderHeader": "Det er ingen kanaler du kan se i denne organisasjonen.",
   "allChannelsPageTitle": "Alle kanaler",
   "chooseAccountButtonAddAnAccount": "Legg til en konto",
@@ -58,5 +58,5 @@
   "profileButtonSendDirectMessage": "Send direktemelding",
   "settingsPageTitle": "Innstillinger",
   "upgradeWelcomeDialogDismiss": "La oss gå",
-  "upgradeWelcomeDialogTitle": "Velkommen til den nye Zulip-appen!"
+  "upgradeWelcomeDialogTitle": "Velkommen til den nye Consort-appen!"
 }

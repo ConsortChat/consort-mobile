@@ -4,7 +4,7 @@
 #   https://github.com/flutter/flutter/blob/main/packages/flutter_tools/templates/app/pubspec.yaml.tmpl
 
 name: zulip
-description: A Zulip client for Android and iOS
+description: The Consort client for Android and iOS
 publish_to: 'none'
 
 # Keep the last two numbers equal; see docs/release.md.
@@ -244,7 +244,7 @@ flutter:
     # If adding a font, remember to account for its license in lib/licenses.dart.
 
 patrol:
-  app_name: Zulip
+  app_name: Consort
   android:
     package_name: com.zulipmobile
   ios:

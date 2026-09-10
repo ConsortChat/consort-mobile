@@ -1,5 +1,5 @@
 {
-  "aboutPageTitle": "About Zulip",
+  "aboutPageTitle": "About Consort",
   "@aboutPageTitle": {
     "description": "Title for About Zulip page."
   },
@@ -19,7 +19,7 @@
   "@aboutPageOpenSourceLicenses": {
     "description": "Item title in About Zulip page to navigate to Licenses page"
   },
-  "upgradeWelcomeDialogTitle": "Welcome to the new Zulip app!",
+  "upgradeWelcomeDialogTitle": "Welcome to the new Consort app!",
   "@upgradeWelcomeDialogTitle": {
     "description": "Title for dialog shown on first upgrade from the legacy Zulip app."
   },
@@ -104,11 +104,11 @@
   "@permissionsNeededOpenSettings": {
     "description": "Button label for permissions dialog button that opens the system settings screen."
   },
-  "permissionsDeniedCameraAccess": "To upload an image, please grant Zulip additional permissions in Settings.",
+  "permissionsDeniedCameraAccess": "To upload an image, please grant Consort additional permissions in Settings.",
   "@permissionsDeniedCameraAccess": {
     "description": "Message for dialog asking the user to grant permissions for camera access."
   },
-  "permissionsDeniedReadExternalStorage": "To upload files, please grant Zulip additional permissions in Settings.",
+  "permissionsDeniedReadExternalStorage": "To upload files, please grant Consort additional permissions in Settings.",
   "@permissionsDeniedReadExternalStorage": {
     "description": "Message for dialog asking the user to grant permissions for external storage read access."
   },
@@ -516,11 +516,11 @@
       "message": {"type": "String", "example": "Invalid format"}
     }
   },
-  "errorConnectingToServerShort": "Error connecting to Zulip. Retrying…",
+  "errorConnectingToServerShort": "Error connecting to Consort. Retrying…",
   "@errorConnectingToServerShort": {
     "description": "Short error message for a generic unknown error connecting to the server."
   },
-  "errorConnectingToServerDetails": "Error connecting to Zulip at {serverUrl}. Will retry:\n\n{error}",
+  "errorConnectingToServerDetails": "Error connecting to Consort at {serverUrl}. Will retry:\n\n{error}",
   "@errorConnectingToServerDetails": {
     "description": "Dialog error message for a generic unknown error connecting to the server with details.",
     "placeholders": {
@@ -528,11 +528,11 @@
       "error": {"type": "String", "example": "Invalid format"}
     }
   },
-  "errorHandlingEventTitle": "Error handling a Zulip event. Retrying connection…",
+  "errorHandlingEventTitle": "Error handling a Consort event. Retrying connection…",
   "@errorHandlingEventTitle": {
     "description": "Error title on failing to handle a Zulip server event."
   },
-  "errorHandlingEventDetails": "Error handling a Zulip event from {serverUrl}; will retry.\n\nError: {error}\n\nEvent: {event}",
+  "errorHandlingEventDetails": "Error handling a Consort event from {serverUrl}; will retry.\n\nError: {error}\n\nEvent: {event}",
   "@errorHandlingEventDetails": {
     "description": "Error details on failing to handle a Zulip server event.",
     "placeholders": {
@@ -825,7 +825,7 @@
   "@emptyMessageListSelfDmHeader": {
     "description": "Placeholder for the self-DM page when there are no messages."
   },
-  "emptyMessageListSelfDmMessage": "Use this space for personal notes, or to test out Zulip features.",
+  "emptyMessageListSelfDmMessage": "Use this space for personal notes, or to test out Consort features.",
   "@emptyMessageListSelfDmMessage": {
     "description": "Extra detail in the placeholder for the self-DM page when there are no messages."
   },
@@ -969,11 +969,11 @@
   "@loginAddAnAccountPageTitle": {
     "description": "Title for page to add a Zulip account."
   },
-  "loginRealmUrlLabel": "Your Zulip organization URL",
+  "loginRealmUrlLabel": "Your Consort organization URL",
   "@loginRealmUrlLabel": {
     "description": "Label in login page for Zulip realm/org URL entry."
   },
-  "loginRealmUrlHelperText": "This is the address you would use to open Zulip in a browser.",
+  "loginRealmUrlHelperText": "This is the address you would use to open Consort in a browser.",
   "@loginRealmUrlHelperText": {
     "description": "Helper text below the Zulip organization URL entry field on the login page."
   },
@@ -1665,7 +1665,7 @@
   "@experimentalFeatureSettingsPageTitle": {
     "description": "Title of settings page for experimental, in-development features"
   },
-  "experimentalFeatureSettingsWarning": "These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Zulip.",
+  "experimentalFeatureSettingsWarning": "These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Consort.",
   "@experimentalFeatureSettingsWarning": {
     "description": "Warning text on settings page for experimental, in-development features"
   },
@@ -1717,7 +1717,7 @@
   "@scrollToBottomTooltip": {
     "description": "Tooltip for button to scroll to bottom."
   },
-  "zulipAppTitle": "Zulip",
+  "zulipAppTitle": "Consort",
   "@zulipAppTitle": {
     "description": "The name of Zulip. This should be either 'Zulip' or a transliteration."
   },

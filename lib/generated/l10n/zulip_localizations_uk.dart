@@ -10,7 +10,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   ZulipLocalizationsUk([String locale = 'uk']) : super(locale);
 
   @override
-  String get aboutPageTitle => 'Про Zulip';
+  String get aboutPageTitle => 'Про Consort';
 
   @override
   String get aboutPageAppVersion => 'Версія додатку';
@@ -27,7 +27,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get upgradeWelcomeDialogTitle =>
-      'Ласкаво просимо у новий додаток Zulip!';
+      'Ласкаво просимо у новий додаток Consort!';
 
   @override
   String get upgradeWelcomeDialogMessage =>
@@ -98,11 +98,11 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get permissionsDeniedCameraAccess =>
-      'Щоб завантажити зображення, надайте Zulip додаткові дозволи в налаштуваннях.';
+      'Щоб завантажити зображення, надайте Consort додаткові дозволи в налаштуваннях.';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      'Щоб завантажувати файли, надайте Zulip додаткові дозволи в налаштуваннях.';
+      'Щоб завантажувати файли, надайте Consort додаткові дозволи в налаштуваннях.';
 
   @override
   String get actionSheetOptionSubscribe => 'Підписатися';
@@ -448,16 +448,16 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get errorConnectingToServerShort =>
-      'Помилка підключення до Zulip. Повторна спроба…';
+      'Помилка підключення до Consort. Повторна спроба…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return 'Помилка підключення до Zulip на $serverUrl. Буде повторена спроба:\n\n$error';
+    return 'Помилка підключення до Consort на $serverUrl. Буде повторена спроба:\n\n$error';
   }
 
   @override
   String get errorHandlingEventTitle =>
-      'Помилка обробки події Zulip. Повторна спроба підключення…';
+      'Помилка обробки події Consort. Повторна спроба підключення…';
 
   @override
   String errorHandlingEventDetails(
@@ -465,7 +465,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
     String error,
     String event,
   ) {
-    return 'Помилка обробки події Zulip із $serverUrl; буде повторювати спробу.\n\nПомилка: $error\n\nПодія: $event';
+    return 'Помилка обробки події Consort із $serverUrl; буде повторювати спробу.\n\nПомилка: $error\n\nПодія: $event';
   }
 
   @override
@@ -699,7 +699,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get emptyMessageListSelfDmMessage =>
-      'Використовуйте цей простір для особистих нотаток або для тестування функцій Zulip.';
+      'Використовуйте цей простір для особистих нотаток або для тестування функцій Consort.';
 
   @override
   String emptyMessageListDm(String person) {
@@ -816,11 +816,11 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Додати обліковий запис';
 
   @override
-  String get loginRealmUrlLabel => 'Your Zulip organization URL';
+  String get loginRealmUrlLabel => 'Your Consort organization URL';
 
   @override
   String get loginRealmUrlHelperText =>
-      'This is the address you would use to open Zulip in a browser.';
+      'This is the address you would use to open Consort in a browser.';
 
   @override
   String get loginRealmUrlHelpButton => 'Help';
@@ -1410,7 +1410,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      'Ці опції вмикають функції, які ще розробляються та не готові. Вони можуть не працювати та викликати проблеми в інших місцях додатку.\n\nМетою цих налаштувань є експериментування людьми, що працюють над розробкою Zulip.';
+      'Ці опції вмикають функції, які ще розробляються та не готові. Вони можуть не працювати та викликати проблеми в інших місцях додатку.\n\nМетою цих налаштувань є експериментування людьми, що працюють над розробкою Consort.';
 
   @override
   String get errorNotificationOpenTitle => 'Не вдалося відкрити сповіщення';
@@ -1451,7 +1451,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get scrollToBottomTooltip => 'Прокрутити вниз';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader => 'Тут ще немає тем.';

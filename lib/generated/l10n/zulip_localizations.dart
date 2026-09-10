@@ -159,7 +159,7 @@ abstract class ZulipLocalizations {
   /// Title for About Zulip page.
   ///
   /// In en, this message translates to:
-  /// **'About Zulip'**
+  /// **'About Consort'**
   String get aboutPageTitle;
 
   /// Label for Zulip app version in About Zulip page
@@ -189,7 +189,7 @@ abstract class ZulipLocalizations {
   /// Title for dialog shown on first upgrade from the legacy Zulip app.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to the new Zulip app!'**
+  /// **'Welcome to the new Consort app!'**
   String get upgradeWelcomeDialogTitle;
 
   /// Message text for dialog shown on first upgrade from the legacy Zulip app.
@@ -315,13 +315,13 @@ abstract class ZulipLocalizations {
   /// Message for dialog asking the user to grant permissions for camera access.
   ///
   /// In en, this message translates to:
-  /// **'To upload an image, please grant Zulip additional permissions in Settings.'**
+  /// **'To upload an image, please grant Consort additional permissions in Settings.'**
   String get permissionsDeniedCameraAccess;
 
   /// Message for dialog asking the user to grant permissions for external storage read access.
   ///
   /// In en, this message translates to:
-  /// **'To upload files, please grant Zulip additional permissions in Settings.'**
+  /// **'To upload files, please grant Consort additional permissions in Settings.'**
   String get permissionsDeniedReadExternalStorage;
 
   /// Label in the channel action sheet for subscribing to the channel.
@@ -865,25 +865,25 @@ abstract class ZulipLocalizations {
   /// Short error message for a generic unknown error connecting to the server.
   ///
   /// In en, this message translates to:
-  /// **'Error connecting to Zulip. Retrying…'**
+  /// **'Error connecting to Consort. Retrying…'**
   String get errorConnectingToServerShort;
 
   /// Dialog error message for a generic unknown error connecting to the server with details.
   ///
   /// In en, this message translates to:
-  /// **'Error connecting to Zulip at {serverUrl}. Will retry:\n\n{error}'**
+  /// **'Error connecting to Consort at {serverUrl}. Will retry:\n\n{error}'**
   String errorConnectingToServerDetails(String serverUrl, String error);
 
   /// Error title on failing to handle a Zulip server event.
   ///
   /// In en, this message translates to:
-  /// **'Error handling a Zulip event. Retrying connection…'**
+  /// **'Error handling a Consort event. Retrying connection…'**
   String get errorHandlingEventTitle;
 
   /// Error details on failing to handle a Zulip server event.
   ///
   /// In en, this message translates to:
-  /// **'Error handling a Zulip event from {serverUrl}; will retry.\n\nError: {error}\n\nEvent: {event}'**
+  /// **'Error handling a Consort event from {serverUrl}; will retry.\n\nError: {error}\n\nEvent: {event}'**
   String errorHandlingEventDetails(
     String serverUrl,
     String error,
@@ -1283,7 +1283,7 @@ abstract class ZulipLocalizations {
   /// Extra detail in the placeholder for the self-DM page when there are no messages.
   ///
   /// In en, this message translates to:
-  /// **'Use this space for personal notes, or to test out Zulip features.'**
+  /// **'Use this space for personal notes, or to test out Consort features.'**
   String get emptyMessageListSelfDmMessage;
 
   /// Placeholder for a 1:1 DM page when there are no messages.
@@ -1481,13 +1481,13 @@ abstract class ZulipLocalizations {
   /// Label in login page for Zulip realm/org URL entry.
   ///
   /// In en, this message translates to:
-  /// **'Your Zulip organization URL'**
+  /// **'Your Consort organization URL'**
   String get loginRealmUrlLabel;
 
   /// Helper text below the Zulip organization URL entry field on the login page.
   ///
   /// In en, this message translates to:
-  /// **'This is the address you would use to open Zulip in a browser.'**
+  /// **'This is the address you would use to open Consort in a browser.'**
   String get loginRealmUrlHelperText;
 
   /// Tooltip for the 'help' icon button for the org-URL input in the login flow.
@@ -2411,7 +2411,7 @@ abstract class ZulipLocalizations {
   /// Warning text on settings page for experimental, in-development features
   ///
   /// In en, this message translates to:
-  /// **'These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Zulip.'**
+  /// **'These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Consort.'**
   String get experimentalFeatureSettingsWarning;
 
   /// Error title when notification opening fails
@@ -2489,7 +2489,7 @@ abstract class ZulipLocalizations {
   /// The name of Zulip. This should be either 'Zulip' or a transliteration.
   ///
   /// In en, this message translates to:
-  /// **'Zulip'**
+  /// **'Consort'**
   String get zulipAppTitle;
 
   /// Header text shown when a channel has no topics.

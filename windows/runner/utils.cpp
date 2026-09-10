@@ -10,7 +10,7 @@
 namespace {
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
-constexpr const wchar_t kWindowTitle[] = L"Zulip";
+constexpr const wchar_t kWindowTitle[] = L"Consort";
 constexpr ULONG_PTR kWebAuthMessageId = 0x5A554C49;  // "ZULI"
 
 bool IsWebAuthUrl(const std::string& value) {

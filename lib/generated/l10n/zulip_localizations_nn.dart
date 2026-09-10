@@ -10,7 +10,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
   ZulipLocalizationsNn([String locale = 'nn']) : super(locale);
 
   @override
-  String get aboutPageTitle => 'Om Zulip';
+  String get aboutPageTitle => 'Om Consort';
 
   @override
   String get aboutPageAppVersion => 'Appversjon';
@@ -26,7 +26,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
   String get aboutPageOpenSourceLicenses => 'Lisensar for open kjeldekode';
 
   @override
-  String get upgradeWelcomeDialogTitle => 'Velkomen til den nye Zulip-appen!';
+  String get upgradeWelcomeDialogTitle => 'Velkomen til den nye Consort-appen!';
 
   @override
   String get upgradeWelcomeDialogMessage =>
@@ -95,11 +95,11 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
 
   @override
   String get permissionsDeniedCameraAccess =>
-      'Gje Zulip ekstra løyve i Innstillingane for å lasta opp eit bilete.';
+      'Gje Consort ekstra løyve i Innstillingane for å lasta opp eit bilete.';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      'Gje Zulip ekstra løyve i Innstillingane for å lasta opp filer.';
+      'Gje Consort ekstra løyve i Innstillingane for å lasta opp filer.';
 
   @override
   String get actionSheetOptionSubscribe => 'Abonner';
@@ -439,16 +439,16 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
 
   @override
   String get errorConnectingToServerShort =>
-      'Feil når eg kopla til Zulip. Prøver på nytt…';
+      'Feil når eg kopla til Consort. Prøver på nytt…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return 'Feil når eg kopla til Zulip på $serverUrl. Prøver på nytt:\n\n$error';
+    return 'Feil når eg kopla til Consort på $serverUrl. Prøver på nytt:\n\n$error';
   }
 
   @override
   String get errorHandlingEventTitle =>
-      'Feil når eg handsama Zulip-hending. Prøver koplinga på nytt…';
+      'Feil når eg handsama Consort-hending. Prøver koplinga på nytt…';
 
   @override
   String errorHandlingEventDetails(
@@ -456,7 +456,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
     String error,
     String event,
   ) {
-    return 'Feil når eg handsama Zulip-hending frå $serverUrl; prøver på nytt.\n\nFeil: $error\n\nHending: $event';
+    return 'Feil når eg handsama Consort-hending frå $serverUrl; prøver på nytt.\n\nFeil: $error\n\nHending: $event';
   }
 
   @override
@@ -687,7 +687,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
 
   @override
   String get emptyMessageListSelfDmMessage =>
-      'Bruk denne plassen for eigne notat, eller for å testa Zulip-funksjonar.';
+      'Bruk denne plassen for eigne notat, eller for å testa Consort-funksjonar.';
 
   @override
   String emptyMessageListDm(String person) {
@@ -804,11 +804,11 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Legg til ein konto';
 
   @override
-  String get loginRealmUrlLabel => 'URL-en til Zulip-organisasjonen din';
+  String get loginRealmUrlLabel => 'URL-en til Consort-organisasjonen din';
 
   @override
   String get loginRealmUrlHelperText =>
-      'This is the address you would use to open Zulip in a browser.';
+      'This is the address you would use to open Consort in a browser.';
 
   @override
   String get loginRealmUrlHelpButton => 'Help';
@@ -1394,7 +1394,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      'Desse alternativa slår på funksjonar som framleis er under utvikling, og ikkje er ferdige. Det er ikkje sikkert dei fungerer, og dei kan påverka andre delar av appen.\n\nFormålet med desse innstillingane er at Zulip-utviklarane skal kunna eksperimentera.';
+      'Desse alternativa slår på funksjonar som framleis er under utvikling, og ikkje er ferdige. Det er ikkje sikkert dei fungerer, og dei kan påverka andre delar av appen.\n\nFormålet med desse innstillingane er at Consort-utviklarane skal kunna eksperimentera.';
 
   @override
   String get errorNotificationOpenTitle => 'Kunne ikkje opna varsel';
@@ -1435,7 +1435,7 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
   String get scrollToBottomTooltip => 'Rull til botna';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader =>

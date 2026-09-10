@@ -10,7 +10,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   ZulipLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
-  String get aboutPageTitle => 'O Zulipu';
+  String get aboutPageTitle => 'O Consortu';
 
   @override
   String get aboutPageAppVersion => 'Različica aplikacije';
@@ -26,7 +26,8 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get aboutPageOpenSourceLicenses => 'Odprtokodne licence';
 
   @override
-  String get upgradeWelcomeDialogTitle => 'Dobrodošli v novi aplikaciji Zulip!';
+  String get upgradeWelcomeDialogTitle =>
+      'Dobrodošli v novi aplikaciji Consort!';
 
   @override
   String get upgradeWelcomeDialogMessage =>
@@ -96,11 +97,11 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get permissionsDeniedCameraAccess =>
-      'Za nalaganje slik v nastavitvah omogočite Zulipu dostop do kamere.';
+      'Za nalaganje slik v nastavitvah omogočite Consortu dostop do kamere.';
 
   @override
   String get permissionsDeniedReadExternalStorage =>
-      'Za nalaganje datotek v nastavitvah omogočite Zulipu dostop do shrambe datotek.';
+      'Za nalaganje datotek v nastavitvah omogočite Consortu dostop do shrambe datotek.';
 
   @override
   String get actionSheetOptionSubscribe => 'Naroči se';
@@ -459,11 +460,11 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get errorConnectingToServerShort =>
-      'Napaka pri povezovanju z Zulipom. Poskušamo znova…';
+      'Napaka pri povezovanju z Consortom. Poskušamo znova…';
 
   @override
   String errorConnectingToServerDetails(String serverUrl, String error) {
-    return 'Napaka pri povezovanju z Zulipom na $serverUrl. Poskusili bomo znova:\n\n$error';
+    return 'Napaka pri povezovanju z Consortom na $serverUrl. Poskusili bomo znova:\n\n$error';
   }
 
   @override
@@ -710,7 +711,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get emptyMessageListSelfDmMessage =>
-      'Use this space for personal notes, or to test out Zulip features.';
+      'Use this space for personal notes, or to test out Consort features.';
 
   @override
   String emptyMessageListDm(String person) {
@@ -826,11 +827,11 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Dodaj račun';
 
   @override
-  String get loginRealmUrlLabel => 'Your Zulip organization URL';
+  String get loginRealmUrlLabel => 'Your Consort organization URL';
 
   @override
   String get loginRealmUrlHelperText =>
-      'This is the address you would use to open Zulip in a browser.';
+      'This is the address you would use to open Consort in a browser.';
 
   @override
   String get loginRealmUrlHelpButton => 'Help';
@@ -1427,7 +1428,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get experimentalFeatureSettingsWarning =>
-      'Te možnosti omogočajo funkcije, ki so še v razvoju in niso pripravljene. Morda ne bodo delovale in lahko povzročijo težave v drugih delih aplikacije.\n\nNamen teh nastavitev je eksperimentiranje za uporabnike, ki delajo na razvoju Zulipa.';
+      'Te možnosti omogočajo funkcije, ki so še v razvoju in niso pripravljene. Morda ne bodo delovale in lahko povzročijo težave v drugih delih aplikacije.\n\nNamen teh nastavitev je eksperimentiranje za uporabnike, ki delajo na razvoju Consorta.';
 
   @override
   String get errorNotificationOpenTitle => 'Obvestila ni bilo mogoče odpreti';
@@ -1469,7 +1470,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get scrollToBottomTooltip => 'Premakni se na konec';
 
   @override
-  String get zulipAppTitle => 'Zulip';
+  String get zulipAppTitle => 'Consort';
 
   @override
   String get topicListEmptyPlaceholderHeader => 'There are no topics here yet.';

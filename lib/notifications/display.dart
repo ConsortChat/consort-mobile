@@ -262,8 +262,8 @@ class NotificationDisplayManager {
       channelId: NotificationChannelManager.kChannelId,
       groupKey: groupKey,
 
-      color: kZulipBrandColor.argbInt,
-      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+      color: kConsortBrandColor.argbInt,
+      smallIconResourceName: 'consort_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
 
       contentTitle: data.title,
       contentText: data.body,
@@ -292,8 +292,8 @@ class NotificationDisplayManager {
       groupKey: groupKey,
       isGroupSummary: true,
 
-      color: kZulipBrandColor.argbInt,
-      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+      color: kConsortBrandColor.argbInt,
+      smallIconResourceName: 'consort_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
       inboxStyle: InboxStyle(
         summaryText: account.realmName ?? account.realmUrl.toString()),
 
@@ -381,9 +381,9 @@ class NotificationDisplayManager {
       channelId: NotificationChannelManager.kChannelId,
       groupKey: groupKey,
 
-      color: kZulipBrandColor.argbInt,
+      color: kConsortBrandColor.argbInt,
       // TODO vary notification icon for debug
-      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+      smallIconResourceName: 'consort_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
 
       messagingStyle: messagingStyle,
       number: messagingStyle.messages.length,
@@ -425,9 +425,9 @@ class NotificationDisplayManager {
       groupKey: groupKey,
       isGroupSummary: true,
 
-      color: kZulipBrandColor.argbInt,
+      color: kConsortBrandColor.argbInt,
       // TODO vary notification icon for debug
-      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+      smallIconResourceName: 'consort_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
       inboxStyle: InboxStyle(
         summaryText: account.realmName
           ?? data.realmName

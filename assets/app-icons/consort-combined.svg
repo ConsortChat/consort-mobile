@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <defs>
+    <linearGradient id="consort-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#0E7490"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="1000" fill="url(#consort-gradient)"/>
+  <path transform="translate(120 120) scale(.76)" d="M122.5 327.5A82.5 82.5 0 0 1 287.5 327.5L287.5 672.5A82.5 82.5 0 0 1 122.5 672.5ZM332.5 167.5A82.5 82.5 0 0 1 497.5 167.5L497.5 832.5A82.5 82.5 0 0 1 332.5 832.5ZM542.5 267.5A82.5 82.5 0 0 1 707.5 267.5L707.5 732.5A82.5 82.5 0 0 1 542.5 732.5ZM752.5 397.5A82.5 82.5 0 0 1 917.5 397.5L917.5 602.5A82.5 82.5 0 0 1 752.5 602.5Z" fill="#fff"/>
+</svg>

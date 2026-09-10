@@ -535,8 +535,8 @@ void main() {
               ..conversationTitle.equals(expectedTitle)
               ..messages.deepEquals(messageStyleMessagesChecks))
             ..number.equals(messageStyleMessages.length)
-            ..color.equals(kZulipBrandColor.argbInt)
-            ..smallIconResourceName.equals('zulip_notification')
+            ..color.equals(kConsortBrandColor.argbInt)
+            ..smallIconResourceName.equals('consort_notification')
             ..extras.which((it) => it.isNotNull()
               ..deepEquals(<String, String>{
                 NotificationDisplayManager.kExtraLastMessageId: data.messageId.toString(),
@@ -558,8 +558,8 @@ void main() {
             ..channelId.equals(NotificationChannelManager.kChannelId)
             ..contentTitle.isNull()
             ..contentText.isNull()
-            ..color.equals(kZulipBrandColor.argbInt)
-            ..smallIconResourceName.equals('zulip_notification')
+            ..color.equals(kConsortBrandColor.argbInt)
+            ..smallIconResourceName.equals('consort_notification')
             ..extras.isNull()
             ..groupKey.equals(expectedGroupKey)
             ..isGroupSummary.equals(true)
