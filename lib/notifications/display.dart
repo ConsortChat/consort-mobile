@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../api/model/model.dart';
 import '../api/notifications.dart';
+import '../api/web_push.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../host/android_notifications.dart';
 import '../log.dart';
@@ -224,6 +225,82 @@ class NotificationDisplayManager {
       case NotifPayloadNewMessage(): await _onNotifPayloadNewMessage(data, account);
       case NotifPayloadRemove(): await _onNotifPayloadRemove(data);
     }
+  }
+
+  /// Show or clear notifications for a Web Push payload
+  /// from Consort's server; see [WebPushService].
+  static Future<void> onWebPushPayload(WebPushPayload data, Account account) async {
+    assert(defaultTargetPlatform == TargetPlatform.android);
+    switch (data) {
+      case WebPushAddPayload(): await _onWebPushAdd(data, account);
+      case WebPushRemovePayload():
+        // Web Push notifications carry [kExtraLastMessageId]
+        // just as conversation notifications do, so they clear the same way.
+        await _onNotifPayloadRemove(NotifPayloadRemove(
+          realmUrl: account.realmUrl,
+          realmName: account.realmName,
+          userId: account.userId,
+          messageIds: data.messageIds));
+    }
+  }
+
+  /// Web Push payloads give a ready-made title and body for each message,
+  /// but not which conversation it's in.  So each message gets
+  /// a notification of its own in the account's group,
+  /// which opens the combined feed at that message.
+  static Future<void> _onWebPushAdd(WebPushAddPayload data, Account account) async {
+    final groupKey = _groupKey(account.realmUrl, account.userId);
+    final intentDataUrl = NotificationOpenPayload(
+      realmUrl: account.realmUrl,
+      userId: account.userId,
+      narrow: const CombinedFeedNarrow(),
+      messageId: data.messageId).buildNotificationUrl();
+
+    await _androidHost.notify(
+      id: kNotificationId,
+      tag: '$groupKey|web-push:${data.messageId}',
+      channelId: NotificationChannelManager.kChannelId,
+      groupKey: groupKey,
+
+      color: kZulipBrandColor.argbInt,
+      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+
+      contentTitle: data.title,
+      contentText: data.body,
+      extras: {
+        // Used to decide when a `WebPushRemovePayload` should clear this notification.
+        kExtraLastMessageId: data.messageId.toString(),
+      },
+
+      contentIntent: PendingIntent(
+        // The intent data URL is distinct for each message,
+        // so this value doesn't matter.
+        requestCode: 0,
+        flags: PendingIntentFlag.immutable,
+        intent: AndroidIntent(
+          action: IntentAction.view,
+          dataUrl: intentDataUrl.toString(),
+          // As in _onNotifPayloadNewMessage.
+          flags: IntentFlag.activityClearTop | IntentFlag.activityNewTask)),
+      autoCancel: true,
+    );
+
+    await _androidHost.notify(
+      id: kNotificationId,
+      tag: groupKey,
+      channelId: NotificationChannelManager.kChannelId,
+      groupKey: groupKey,
+      isGroupSummary: true,
+
+      color: kZulipBrandColor.argbInt,
+      smallIconResourceName: 'zulip_notification', // This name must appear in keep.xml too: https://github.com/zulip/zulip-flutter/issues/528
+      inboxStyle: InboxStyle(
+        summaryText: account.realmName ?? account.realmUrl.toString()),
+
+      // As in _onNotifPayloadNewMessage.
+      // TODO(android-12): cut this autoCancel workaround
+      autoCancel: true,
+    );
   }
 
   static Future<void> _onNotifPayloadNewMessage(NotifPayloadNewMessage data, Account account) async {

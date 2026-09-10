@@ -6,6 +6,7 @@ import '../api/core.dart';
 import '../api/route/account.dart';
 import '../notifications/display.dart';
 import '../notifications/receive.dart';
+import '../notifications/web_push.dart';
 import 'store.dart';
 
 // TODO: Make this a part of GlobalStore
@@ -32,8 +33,10 @@ Future<void> unregisterDevice(GlobalStore globalStore, int accountId) async {
 
   final connection = globalStore.apiConnectionFromAccount(account);
   try {
+    final webPushFuture = WebPushService.instance.unregister(account, connection);
     await _unregisterToken(account, connection);
     await _unregisterDevice(account, connection);
+    await webPushFuture;
   } finally {
     connection.close();
   }

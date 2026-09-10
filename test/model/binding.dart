@@ -11,6 +11,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:sodium/sodium.dart' as sodium;
 import 'package:test/fake.dart';
+import 'package:unifiedpush_platform_interface/data/failed_reason.dart';
+import 'package:unifiedpush_platform_interface/data/push_endpoint.dart';
+import 'package:unifiedpush_platform_interface/data/push_message.dart';
+import 'package:unifiedpush_platform_interface/unifiedpush_platform_interface.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:zulip/host/android_intents.dart';
 import 'package:zulip/host/android_notifications.dart';
@@ -86,6 +90,7 @@ class TestZulipBinding extends ZulipBinding {
     _resetPackageInfo();
     _resetFirebase();
     _resetNotifications();
+    _resetUnifiedPush();
     _resetPickFiles();
     _resetPickImage();
     _resetPickMultipleMedia();
@@ -421,6 +426,15 @@ class TestZulipBinding extends ZulipBinding {
   void firebaseMessagingOnBackgroundMessage(BackgroundMessageHandler handler) {
     firebaseMessaging.onBackgroundMessage.stream.listen(handler);
   }
+
+  void _resetUnifiedPush() {
+    _unifiedPush = null;
+  }
+
+  FakeUnifiedPush? _unifiedPush;
+
+  @override
+  FakeUnifiedPush get unifiedPush => (_unifiedPush ??= FakeUnifiedPush());
 
   void _resetNotifications() {
     _androidNotificationHostApi = null;
@@ -835,6 +849,103 @@ typedef FirebaseMessagingRequestPermissionCall = ({
   bool providesAppNotificationSettings,
 });
 
+class FakeUnifiedPush extends Fake implements UnifiedPushPlatform {
+  /// The distributor [getDistributor] reports,
+  /// as if it had already acknowledged a registration.
+  String? distributor;
+
+  /// Whether [tryUseCurrentOrDefaultDistributor] finds a distributor.
+  ///
+  /// False by default, as on a device with no distributor installed,
+  /// so code under test registers for nothing unless a test says otherwise.
+  bool hasDefaultDistributor = false;
+
+  Object? registerException;
+
+  // The plugin's callback types say `void`, even though handlers may be async.
+  // Preserve their runtime return values so event-driving test methods can
+  // wait for those handlers to finish.
+  Object? Function(PushEndpoint endpoint, String instance)? _onNewEndpoint;
+  void Function(FailedReason reason, String instance)? _onRegistrationFailed;
+  Object? Function(PushMessage message, String instance)? _onMessage;
+  void Function(String instance)? _onUnregistered;
+
+  @override
+  Future<void> initializeCallback({
+    void Function(PushEndpoint endpoint, String instance)? onNewEndpoint,
+    void Function(FailedReason reason, String instance)? onRegistrationFailed,
+    void Function(String instance)? onUnregistered,
+    void Function(PushMessage message, String instance)? onMessage,
+  }) async {
+    _onNewEndpoint = onNewEndpoint == null
+      ? null
+      : (endpoint, instance) => Function.apply(onNewEndpoint, [endpoint, instance]);
+    _onRegistrationFailed = onRegistrationFailed;
+    _onMessage = onMessage == null
+      ? null
+      : (message, instance) => Function.apply(onMessage, [message, instance]);
+    _onUnregistered = onUnregistered;
+  }
+
+  @override
+  Future<String?> getDistributor() async => distributor;
+
+  @override
+  Future<bool> tryUseCurrentOrDefaultDistributor() async => hasDefaultDistributor;
+
+  @override
+  Future<void> register(String instance, List<String> features,
+      String? messageForDistributor, String? vapid) async {
+    _registerCalls.add((instance: instance, vapid: vapid));
+    if (registerException != null) throw registerException!;
+  }
+
+  /// Consume the log of calls made to [register].
+  List<({String instance, String? vapid})> takeRegisterCalls() {
+    final result = _registerCalls;
+    _registerCalls = [];
+    return result;
+  }
+  List<({String instance, String? vapid})> _registerCalls = [];
+
+  @override
+  Future<void> unregister(String instance) async {
+    _unregisterCalls.add(instance);
+  }
+
+  /// Consume the log of calls made to [unregister].
+  List<String> takeUnregisterCalls() {
+    final result = _unregisterCalls;
+    _unregisterCalls = [];
+    return result;
+  }
+  List<String> _unregisterCalls = [];
+
+  /// Act as the distributor, giving [instance] a new endpoint.
+  Future<void> sendNewEndpoint(PushEndpoint endpoint, String instance) async {
+    final result = _onNewEndpoint!(endpoint, instance);
+    if (result is Future<void>) await result;
+  }
+
+  /// Act as the distributor, reporting a failed registration for [instance].
+  Future<void> sendRegistrationFailed(FailedReason reason, String instance) async {
+    _onRegistrationFailed!(reason, instance);
+    await Future<void>.delayed(Duration.zero);
+  }
+
+  /// Act as the distributor, delivering a push for [instance].
+  Future<void> sendMessage(PushMessage message, String instance) async {
+    final result = _onMessage!(message, instance);
+    if (result is Future<void>) await result;
+  }
+
+  /// Act as the distributor, dropping the registration for [instance].
+  Future<void> sendUnregistered(String instance) async {
+    _onUnregistered!(instance);
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
 class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
   // TODO(?): Find a better way to handle this. This member is exported from
   //   the Pigeon generated class but are not used for this fake class,
@@ -1126,4 +1237,3 @@ typedef CopySoundResourceToMediaStoreCall = ({
   String targetFileDisplayName,
   String sourceResourceName,
 });
-

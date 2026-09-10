@@ -5,6 +5,7 @@ import com.zulip.flutter.notifications.NotificationTapEventListener
 import com.zulip.flutter.notifications.NotificationTapEventsStreamHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import org.unifiedpush.flutter.connector.Plugin as UnifiedPushPlugin
 
 class MainActivity : FlutterActivity() {
   private var androidIntentEventListener: AndroidIntentEventListener? = null
@@ -12,6 +13,13 @@ class MainActivity : FlutterActivity() {
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
+
+    // unifiedpush_android is included directly instead of through its facade,
+    // so Flutter does not add its native implementation to the generated
+    // plugin registrant.
+    if (!flutterEngine.plugins.has(UnifiedPushPlugin::class.java)) {
+      flutterEngine.plugins.add(UnifiedPushPlugin())
+    }
 
     androidIntentEventListener = AndroidIntentEventListener()
     AndroidIntentEventsStreamHandler.register(

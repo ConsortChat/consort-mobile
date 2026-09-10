@@ -418,6 +418,8 @@ class NotificationOpenPayload {
             .map((idStr) => int.parse(idStr, radix: 10))
             .toList(growable: false);
           narrow = DmNarrow(allRecipientIds: allRecipientIds, selfUserId: userId);
+        case 'combined_feed':
+          narrow = const CombinedFeedNarrow();
         default:
           throw const FormatException();
       }
@@ -455,6 +457,9 @@ class NotificationOpenPayload {
           DmNarrow(:var allRecipientIds) => {
             'narrow_type': 'dm',
             'all_recipient_ids': allRecipientIds.join(','),
+          },
+          CombinedFeedNarrow() => {
+            'narrow_type': 'combined_feed',
           },
           _ => throw UnsupportedError('Found an unexpected Narrow of type ${narrow.runtimeType}.'),
         }),

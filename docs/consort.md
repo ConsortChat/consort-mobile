@@ -25,6 +25,9 @@ ordinary text-channel behavior, and call UI is gated by
   of the `can_create_rooms_group` permission.
 - Correct ephemeral-room handling: an active room with zero occupants remains
   open, while an `active: false` occupancy update closes it locally.
+- Android Web Push notifications through a user-installed UnifiedPush
+  distributor, including delivery while the app is stopped and subscription
+  cleanup on logout.
 - Server-controlled moderator status, access checks, JWT lifetime, call roster
   messages, and room cleanup continue to be enforced by the Consort server.
 
@@ -43,6 +46,8 @@ ordinary text-channel behavior, and call UI is gated by
   separated user-ID field.
 - Add signed-out guest-link handling (`create_as_guest`) and screen-sharing
   broadcast-extension setup on iOS.
+- Add in-app status and setup UI for choosing or installing a UnifiedPush
+  distributor when Android cannot select one automatically.
 - If a native SDK event exposes speaker activity reliably, mirror Consort web's
   speaking rings in the Flutter sidebar. The current sidebar indicates live
   occupancy and names; the native in-call UI owns speaking indication.

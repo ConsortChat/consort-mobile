@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
@@ -15,6 +16,7 @@ import '../model/push_key.dart';
 import '../model/store.dart';
 import 'display.dart';
 import 'open.dart';
+import 'web_push.dart';
 
 @pragma('vm:entry-point')
 class NotificationService {
@@ -28,6 +30,7 @@ class NotificationService {
   /// TODO refactor this better, perhaps unify with ZulipBinding
   @visibleForTesting
   static void debugReset() {
+    WebPushService.debugReset();
     instance.token.dispose();
     _instance = null;
     assert(debugBackgroundIsolateIsLive = true);
@@ -72,6 +75,8 @@ class NotificationService {
           options: kFirebaseOptionsAndroid);
 
         await NotificationDisplayManager.init();
+        // Consort's server sends notifications by Web Push; see WebPushService.
+        unawaited(WebPushService.instance.start());
         ZulipBinding.instance.firebaseMessagingOnMessage
           .listen(_onForegroundMessage);
         ZulipBinding.instance.firebaseMessagingOnBackgroundMessage(

@@ -13,6 +13,7 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:sodium/sodium.dart';
+import 'package:unifiedpush_platform_interface/unifiedpush_platform_interface.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 
@@ -233,6 +234,10 @@ abstract class ZulipBinding {
 
   /// Wraps [firebase_messaging.FirebaseMessaging.onBackgroundMessage].
   void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler);
+
+  /// Wraps [UnifiedPushPlatform.instance],
+  /// for receiving notifications through UnifiedPush on Android.
+  UnifiedPushPlatform get unifiedPush;
 
   /// Wraps the [AndroidNotificationHostApi] constructor.
   AndroidNotificationHostApi get androidNotificationHost;
@@ -683,6 +688,9 @@ class LiveZulipBinding extends ZulipBinding {
   void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler) {
     firebase_messaging.FirebaseMessaging.onBackgroundMessage(handler);
   }
+
+  @override
+  UnifiedPushPlatform get unifiedPush => UnifiedPushPlatform.instance;
 
   @override
   AndroidNotificationHostApi get androidNotificationHost => AndroidNotificationHostApi();
