@@ -15,6 +15,7 @@ import 'package:unifiedpush_platform_interface/unifiedpush_platform_interface.da
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 
+import '../host/android_calls.g.dart';
 import '../host/android_intents.dart' as android_intents_pigeon;
 import '../host/android_notifications.dart';
 import '../host/ios_notifications.g.dart';
@@ -120,6 +121,9 @@ abstract class ZulipBinding {
 
   /// Join a Consort-minted Jitsi conference inside the native app.
   Future<void> joinJitsiCall(Uri url, {required String? subject});
+
+  /// Wraps the [AndroidCallsHostApi] constructor.
+  AndroidCallsHostApi get androidCallsHost;
 
   /// Checks whether [closeInAppWebView] is supported, via package:url_launcher.
   ///
@@ -617,6 +621,9 @@ class LiveZulipBinding extends ZulipBinding {
       }
     },
   );
+
+  @override
+  AndroidCallsHostApi get androidCallsHost => AndroidCallsHostApi();
 
   @override
   Future<bool> supportsCloseForLaunchMode(url_launcher.LaunchMode mode) async {

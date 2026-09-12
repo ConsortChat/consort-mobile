@@ -324,6 +324,18 @@ abstract class ZulipLocalizations {
   /// **'To upload files, please grant Consort additional permissions in Settings.'**
   String get permissionsDeniedReadExternalStorage;
 
+  /// Message for dialog asking the user to grant microphone and camera permissions before joining a call.
+  ///
+  /// In en, this message translates to:
+  /// **'To use your microphone and camera in calls, please grant Consort additional permissions in Settings.'**
+  String get permissionsDeniedCall;
+
+  /// Button label for permissions dialog button that joins a call without granting the permissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Join anyway'**
+  String get permissionsNeededJoinCallAnyway;
+
   /// Label in the channel action sheet for subscribing to the channel.
   ///
   /// In en, this message translates to:

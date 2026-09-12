@@ -102,6 +102,13 @@ class ZulipLocalizationsNn extends ZulipLocalizations {
       'Gje Consort ekstra løyve i Innstillingane for å lasta opp filer.';
 
   @override
+  String get permissionsDeniedCall =>
+      'To use your microphone and camera in calls, please grant Consort additional permissions in Settings.';
+
+  @override
+  String get permissionsNeededJoinCallAnyway => 'Join anyway';
+
+  @override
   String get actionSheetOptionSubscribe => 'Abonner';
 
   @override

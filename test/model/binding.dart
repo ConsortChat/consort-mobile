@@ -14,6 +14,7 @@ import 'package:unifiedpush_platform_interface/data/push_endpoint.dart';
 import 'package:unifiedpush_platform_interface/data/push_message.dart';
 import 'package:unifiedpush_platform_interface/unifiedpush_platform_interface.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
+import 'package:zulip/host/android_calls.g.dart';
 import 'package:zulip/host/android_intents.dart';
 import 'package:zulip/host/android_notifications.dart';
 import 'package:zulip/host/ios_notifications.g.dart';
@@ -80,6 +81,7 @@ class TestZulipBinding extends ZulipBinding {
     _resetCanLaunchUrl();
     _resetLaunchUrl();
     _resetJoinJitsiCall();
+    _resetAndroidCallsHost();
     supportsCloseForLaunchModeResult = true;
     _resetCloseInAppWebView();
     _resetAppLifecycleStateChanges();
@@ -253,6 +255,15 @@ class TestZulipBinding extends ZulipBinding {
   Future<void> joinJitsiCall(Uri url, {required String? subject}) async {
     (_joinJitsiCallCalls ??= []).add((url: url, subject: subject));
   }
+
+  void _resetAndroidCallsHost() {
+    _androidCallsHost = null;
+  }
+
+  @override
+  FakeAndroidCallsHostApi get androidCallsHost =>
+    (_androidCallsHost ??= FakeAndroidCallsHostApi());
+  FakeAndroidCallsHostApi? _androidCallsHost;
 
   bool supportsCloseForLaunchModeResult = true;
 
@@ -938,6 +949,42 @@ class FakeUnifiedPush extends Fake implements UnifiedPushPlatform {
   Future<void> sendUnregistered(String instance) async {
     _onUnregistered!(instance);
     await Future<void>.delayed(Duration.zero);
+  }
+}
+
+class FakeAndroidCallsHostApi implements AndroidCallsHostApi {
+  // TODO(?): Find a better way to handle this. This member is exported from
+  //   the Pigeon generated class but are not used for this fake class,
+  //   so return the default value.
+  @override
+  // ignore: non_constant_identifier_names
+  final BinaryMessenger? pigeonVar_binaryMessenger = null;
+
+  // TODO(?): Find a better way to handle this. This member is exported from
+  //   the Pigeon generated class but are not used for this fake class,
+  //   so return the default value.
+  @override
+  // ignore: non_constant_identifier_names
+  final String pigeonVar_messageChannelSuffix = '';
+
+  /// The value [requestCallPermissions] will return.
+  CallPermissions requestCallPermissionsResult = CallPermissions(
+    microphone: CallPermissionStatus.granted,
+    camera: CallPermissionStatus.granted);
+
+  /// Consume the count of calls made to [requestCallPermissions]
+  /// since the last call to this method.
+  int takeRequestCallPermissionsCallCount() {
+    final result = _requestCallPermissionsCallCount;
+    _requestCallPermissionsCallCount = 0;
+    return result;
+  }
+  int _requestCallPermissionsCallCount = 0;
+
+  @override
+  Future<CallPermissions> requestCallPermissions() async {
+    _requestCallPermissionsCallCount++;
+    return requestCallPermissionsResult;
   }
 }
 

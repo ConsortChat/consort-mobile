@@ -104,6 +104,13 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
       'Aby odebrać pliki Consort musi uzyskać dodatkowe uprawnienia w Ustawieniach.';
 
   @override
+  String get permissionsDeniedCall =>
+      'To use your microphone and camera in calls, please grant Consort additional permissions in Settings.';
+
+  @override
+  String get permissionsNeededJoinCallAnyway => 'Join anyway';
+
+  @override
   String get actionSheetOptionSubscribe => 'Subskrybuj';
 
   @override

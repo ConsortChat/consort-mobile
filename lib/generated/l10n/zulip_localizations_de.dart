@@ -105,6 +105,13 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
       'Bitte gewähre Consort zusätzliche Berechtigungen in den Einstellungen, um Dateien hochzuladen.';
 
   @override
+  String get permissionsDeniedCall =>
+      'To use your microphone and camera in calls, please grant Consort additional permissions in Settings.';
+
+  @override
+  String get permissionsNeededJoinCallAnyway => 'Join anyway';
+
+  @override
   String get actionSheetOptionSubscribe => 'Abonnieren';
 
   @override

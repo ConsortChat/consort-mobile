@@ -1,13 +1,48 @@
 import 'dart:async';
 
+import 'package:app_settings/app_settings.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../api/model/consort.dart';
 import '../api/route/consort.dart' as api;
+import '../generated/l10n/zulip_localizations.dart';
+import '../host/android_calls.g.dart';
 import '../model/binding.dart';
 import '../model/consort.dart';
+import 'dialog.dart';
 import 'page.dart';
 import 'store.dart';
+
+/// On Android, request the microphone and camera permissions for a call.
+///
+/// Returns false if the user chose to go grant blocked permissions in settings
+/// instead of joining now.
+Future<bool> _requestCallPermissions(BuildContext context) async {
+  if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+  // The Jitsi SDK requests these itself when it needs them.  But if one is
+  // blocked, Android shows no request, and the call silently lacks it.
+  final permissions = await ZulipBinding.instance.androidCallsHost
+    .requestCallPermissions();
+  if (permissions.microphone != CallPermissionStatus.blocked
+      && permissions.camera != CallPermissionStatus.blocked) {
+    return true;
+  }
+
+  if (!context.mounted) return false;
+  final zulipLocalizations = ZulipLocalizations.of(context);
+  final dialog = showSuggestedActionDialog(context: context,
+    title: zulipLocalizations.permissionsNeededTitle,
+    message: zulipLocalizations.permissionsDeniedCall,
+    actionButtonText: zulipLocalizations.permissionsNeededOpenSettings,
+    cancelButtonText: zulipLocalizations.permissionsNeededJoinCallAnyway);
+  if (await dialog.result == true) {
+    unawaited(AppSettings.openAppSettings());
+    return false;
+  }
+  return true;
+}
 
 Future<void> joinConsortCall(BuildContext context, {
   required int? channelId,
@@ -17,6 +52,7 @@ Future<void> joinConsortCall(BuildContext context, {
 }) async {
   final store = PerAccountStoreWidget.of(context);
   try {
+    if (!await _requestCallPermissions(context)) return;
     final call = await api.createJitsiCall(store.connection,
       channelId: channelId,
       userIds: userIds,

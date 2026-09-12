@@ -351,11 +351,14 @@ private class AndroidNotificationHost(val context: Context)
 @Keep
 class ZulipPlugin : FlutterPlugin, ActivityAware {
     private var notificationHost: AndroidNotificationHost? = null
+    private var callsHost: AndroidCallsHost? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         Log.d(TAG, "Attaching to Flutter engine.")
         notificationHost = AndroidNotificationHost(binding.applicationContext)
         AndroidNotificationHostApi.setUp(binding.binaryMessenger, notificationHost)
+        callsHost = AndroidCallsHost(binding.applicationContext)
+        AndroidCallsHostApi.setUp(binding.binaryMessenger, callsHost)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -365,21 +368,27 @@ class ZulipPlugin : FlutterPlugin, ActivityAware {
         }
         AndroidNotificationHostApi.setUp(binding.binaryMessenger, null)
         notificationHost = null
+        AndroidCallsHostApi.setUp(binding.binaryMessenger, null)
+        callsHost = null
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         notificationHost?.attachToActivity(binding)
+        callsHost?.attachToActivity(binding)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
         notificationHost?.detachFromActivity()
+        callsHost?.detachFromActivity()
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         notificationHost?.attachToActivity(binding)
+        callsHost?.attachToActivity(binding)
     }
 
     override fun onDetachedFromActivity() {
         notificationHost?.detachFromActivity()
+        callsHost?.detachFromActivity()
     }
 }
