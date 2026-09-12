@@ -30,3 +30,7 @@ test/model/schemas/*.json -diff
 # Treat SVG files as binary.  They're XML, but typically
 # generated from a GUI editor and unenlightening to read.
 *.svg binary
+
+# Keep vendored source byte-for-byte as upstream has it
+# (in particular, its shell scripts keep LF line endings).
+third_party/** -text

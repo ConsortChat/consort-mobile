@@ -1,0 +1,41 @@
+import { IReduxState } from '../../app/types';
+import { getParticipantCountWithFake } from '../../base/participants/functions';
+
+export * from './functions.any';
+
+/**
+ * Returns whether the conference is in connecting state.
+ *
+ * @param {Object} state - The redux state.
+ * @returns {boolean} Whether conference is connecting.
+ */
+export const isConnecting = (state: IReduxState) => {
+    const { connecting, connection } = state['features/base/connection'];
+    const {
+        conference,
+        iceConnected,
+        joining,
+        membersOnly,
+        leaving
+    } = state['features/base/conference'];
+
+    // Alone never establishes a media session.
+    const mediaConnecting = !iceConnected && getParticipantCountWithFake(state) > 1;
+
+    // XXX There is a window of time between the successful establishment of the
+    // XMPP connection and the subsequent commencement of joining the MUC during
+    // which the app does not appear to be doing anything according to the redux
+    // state. In order to not toggle the _connecting props during the window of
+    // time in question, define _connecting as follows:
+    // - the XMPP connection is connecting, or
+    // - the XMPP connection is connected and the conference is joining, or
+    // - the XMPP connection is connected and we have no conference yet, nor we
+    //   are leaving one, or
+    // - the conference is joined but its ICE connection (media) is not up yet,
+    //   so the loader also covers the media-connection gap.
+    return Boolean(
+        connecting
+            || (connection && (!membersOnly && (joining || (!conference && !leaving))))
+            || (conference && mediaConnecting && !leaving)
+    );
+};
