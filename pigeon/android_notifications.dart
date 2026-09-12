@@ -316,4 +316,17 @@ abstract class AndroidNotificationHostApi {
   ///
   /// See: https://developer.android.com/reference/kotlin/androidx/core/app/NotificationManagerCompat?hl=en#cancel(java.lang.String,int)
   void cancel({String? tag, required int id});
+
+  /// Request the `POST_NOTIFICATIONS` runtime permission
+  /// if the app doesn't already have it,
+  /// and return whether the app has it.
+  ///
+  /// Before Android 13 (API 33) there is no such runtime permission,
+  /// and this returns true.
+  /// If there is no activity to show the request from,
+  /// this returns false without asking.
+  ///
+  /// See: https://developer.android.com/develop/ui/views/notifications/notification-permission
+  @async
+  bool requestNotificationPermission();
 }

@@ -1,10 +1,12 @@
 package chat.consort.mobile
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
@@ -14,14 +16,21 @@ import android.provider.MediaStore
 import android.provider.MediaStore.Audio.Media as AudioStore
 import android.util.Log
 import androidx.annotation.Keep
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.PluginRegistry
 import androidx.core.net.toUri
 
 private const val TAG = "ZulipPlugin"
+
+private const val POST_NOTIFICATIONS_REQUEST_CODE = 0x7a01
 
 fun toAndroidPerson(person: Person): androidx.core.app.Person {
     return androidx.core.app.Person.Builder().apply {
@@ -285,13 +294,62 @@ private class AndroidNotificationHost(val context: Context)
     override fun cancel(tag: String?, id: Long) {
         NotificationManagerCompat.from(context).cancel(tag, id.toInt())
     }
+
+    private var activityBinding: ActivityPluginBinding? = null
+
+    private val pendingPermissionCallbacks = mutableListOf<(Result<Boolean>) -> Unit>()
+
+    private val permissionsResultListener =
+        PluginRegistry.RequestPermissionsResultListener { requestCode, _, grantResults ->
+            if (requestCode != POST_NOTIFICATIONS_REQUEST_CODE) {
+                return@RequestPermissionsResultListener false
+            }
+            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            pendingPermissionCallbacks.forEach { it(Result.success(granted)) }
+            pendingPermissionCallbacks.clear()
+            true
+        }
+
+    fun attachToActivity(binding: ActivityPluginBinding) {
+        activityBinding = binding
+        binding.addRequestPermissionsResultListener(permissionsResultListener)
+    }
+
+    fun detachFromActivity() {
+        activityBinding?.removeRequestPermissionsResultListener(permissionsResultListener)
+        activityBinding = null
+    }
+
+    override fun requestNotificationPermission(callback: (Result<Boolean>) -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // Before Android 13 there's no runtime permission to request.
+            callback(Result.success(true))
+            return
+        }
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        if (ContextCompat.checkSelfPermission(context, permission)
+                == PackageManager.PERMISSION_GRANTED) {
+            callback(Result.success(true))
+            return
+        }
+        val activity = activityBinding?.activity
+        if (activity == null) {
+            callback(Result.success(false))
+            return
+        }
+        pendingPermissionCallbacks.add(callback)
+        if (pendingPermissionCallbacks.size == 1) {
+            ActivityCompat.requestPermissions(activity, arrayOf(permission),
+                POST_NOTIFICATIONS_REQUEST_CODE)
+        }
+    }
 }
 
 /** A Flutter plugin for the Zulip app's ad-hoc needs. */
 // @Keep is needed because this class is used only
 // from ZulipShimPlugin, via reflection.
 @Keep
-class ZulipPlugin : FlutterPlugin { // TODO ActivityAware too?
+class ZulipPlugin : FlutterPlugin, ActivityAware {
     private var notificationHost: AndroidNotificationHost? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -307,5 +365,21 @@ class ZulipPlugin : FlutterPlugin { // TODO ActivityAware too?
         }
         AndroidNotificationHostApi.setUp(binding.binaryMessenger, null)
         notificationHost = null
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        notificationHost?.attachToActivity(binding)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        notificationHost?.detachFromActivity()
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        notificationHost?.attachToActivity(binding)
+    }
+
+    override fun onDetachedFromActivity() {
+        notificationHost?.detachFromActivity()
     }
 }

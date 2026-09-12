@@ -1,6 +1,8 @@
 package chat.consort.mobile
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import java.lang.reflect.Constructor
 
 /**
@@ -9,7 +11,7 @@ import java.lang.reflect.Constructor
  * For background, see comment in the `pubspec.yaml` file
  * of this `zulip_plugin` package.
  */
-class ZulipShimPlugin : FlutterPlugin {
+class ZulipShimPlugin : FlutterPlugin, ActivityAware {
     private val plugin: FlutterPlugin = pluginConstructor.newInstance()
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -18,6 +20,22 @@ class ZulipShimPlugin : FlutterPlugin {
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         plugin.onDetachedFromEngine(binding)
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        (plugin as ActivityAware).onAttachedToActivity(binding)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        (plugin as ActivityAware).onDetachedFromActivityForConfigChanges()
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        (plugin as ActivityAware).onReattachedToActivityForConfigChanges(binding)
+    }
+
+    override fun onDetachedFromActivity() {
+        (plugin as ActivityAware).onDetachedFromActivity()
     }
 
     companion object {

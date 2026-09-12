@@ -961,6 +961,24 @@ class FakeAndroidNotificationHostApi implements AndroidNotificationHostApi {
   // ignore: non_constant_identifier_names
   final String pigeonVar_messageChannelSuffix = '';
 
+  /// The value [requestNotificationPermission] will return.
+  bool requestNotificationPermissionResult = true;
+
+  /// Consume the count of calls made to [requestNotificationPermission]
+  /// since the last call to this method.
+  int takeRequestNotificationPermissionCallCount() {
+    final result = _requestNotificationPermissionCallCount;
+    _requestNotificationPermissionCallCount = 0;
+    return result;
+  }
+  int _requestNotificationPermissionCallCount = 0;
+
+  @override
+  Future<bool> requestNotificationPermission() async {
+    _requestNotificationPermissionCallCount++;
+    return requestNotificationPermissionResult;
+  }
+
   /// Lists currently active channels, result is aggregated from calls made to
   /// [createNotificationChannel] and [deleteNotificationChannel],
   /// order of creation is preserved.
