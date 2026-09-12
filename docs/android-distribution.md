@@ -1,81 +1,113 @@
 # Android distribution variants
 
-This document records the planned split between the Google Play and F-Droid
-builds of Consort.
-The split is not implemented yet.
+Consort's Android app is built in two variants,
+as Gradle product flavors:
+
+| Variant | Distribution | Dart entrypoint | Android push transports |
+| --- | --- | --- | --- |
+| `play` | Google Play | `lib/main.dart` | Firebase Cloud Messaging (FCM), plus UnifiedPush |
+| `fdroid` | F-Droid | `lib/main_fdroid.dart` | UnifiedPush only |
 
 Both variants are releases of the same app and use the Android application ID
 `chat.consort.mobile`.
 They share the same version name and version code for a given release.
 
-| Variant | Distribution | Android push transports |
-| --- | --- | --- |
-| `play` | Google Play | Firebase Cloud Messaging (FCM), plus UnifiedPush |
-| `fdroid` | F-Droid | UnifiedPush only |
+iOS has no flavors; it builds from `lib/main.dart`, with FCM.
 
-## Why the F-Droid build must differ
+## Building
 
-The app currently declares `firebase_core` and `firebase_messaging` as direct
-dependencies in `pubspec.yaml`.
-Firebase types and calls also appear in `lib/model/binding.dart`,
-`lib/notifications/receive.dart`, and `lib/firebase_options.dart`.
-Consequently, every Android build currently includes the Firebase Flutter
-plugins and their Google dependencies, even when UnifiedPush handles delivery.
+Android builds must always name a flavor.
+(There is no default flavor:
+a `default-flavor` in `pubspec.yaml` would apply to iOS too,
+where the Xcode project has no matching scheme.)
 
-F-Droid's main repository does not permit non-free dependencies such as the
-Firebase and Google Play services libraries used for FCM.
+For Google Play, and for development:
+
+```
+flutter run --flavor play
+flutter build appbundle --release --flavor play
+```
+
+For F-Droid, in a checkout dedicated to that build:
+
+```
+tools/prepare-fdroid
+flutter build apk --release --flavor fdroid -t lib/main_fdroid.dart
+```
+
+## How Firebase is kept out of the F-Droid build
+
+F-Droid's main repository does not accept non-free dependencies
+such as the Firebase and Google Play services libraries used for FCM.
 Skipping Firebase initialization at runtime is not sufficient:
 the F-Droid dependency graph and APK must not contain those libraries.
+Three things ensure that:
 
-## Required implementation
+- **Dart code.**
+  Shared code reaches FCM only through
+  `ZulipBinding.remotePushNotifications` (see `lib/model/binding.dart`),
+  never through package:firebase_messaging.
+  The Firebase implementation is in `lib/notifications/firebase.dart`,
+  which only `lib/main.dart` imports.
+  `lib/main_fdroid.dart` supplies no implementation,
+  so the F-Droid build receives notifications only through UnifiedPush,
+  and requests Android's notification permission itself
+  (which Firebase does in the Play build).
 
-1. Add explicit `play` and `fdroid` Android product flavors.
-   The release commands should identify both the Android flavor and its Dart
-   entrypoint, for example:
+- **Dependencies.**
+  Flutter has no per-flavor dependencies,
+  so `tools/prepare-fdroid` removes `firebase_core` and `firebase_messaging`
+  from `pubspec.yaml` and runs `flutter pub get`.
+  That drops them and their own dependencies from `pubspec.lock`,
+  keeping every other package at its locked version;
+  the script checks that.
+  The result is not committed:
+  the F-Droid build is reproducible from the committed `pubspec.lock`.
 
-   ```
-   flutter build appbundle --release --flavor play -t lib/main_play.dart
-   flutter build apk --release --flavor fdroid -t lib/main_fdroid.dart
-   ```
+- **Checks.**
+  The Gradle build of any `fdroid` variant fails
+  if its runtime classpath contains `com.google.firebase`
+  or `com.google.android.gms` artifacts;
+  see `android/app/build.gradle`.
+  CI builds the F-Droid APK that way,
+  and also scans its code for classes in those packages.
 
-2. Separate the notification implementations from the shared app code.
-   Shared notification code must use Consort-owned message and transport
-   interfaces rather than expose types from `firebase_core` or
-   `firebase_messaging`.
-   Play-only code should own Firebase initialization, FCM token registration,
-   foreground delivery, and the FCM background entrypoint.
-   F-Droid-only code should start UnifiedPush and must never initialize or
-   register with Firebase.
+The Play build keeps UnifiedPush alongside FCM,
+so users can choose a distributor without changing install source.
 
-3. Give the two builds separate Flutter dependency graphs.
-   Flutter packages cannot be made conditional by an Android Gradle flavor,
-   so adding flavors while retaining Firebase in the root `pubspec.yaml` would
-   still produce a noncompliant F-Droid APK.
-   Use either separate thin Flutter runner packages or a deterministic,
-   checked-in prebuild transformation that produces an F-Droid manifest and
-   lockfile without Firebase.
-   Separate runner packages are preferred because CI can resolve and test both
-   dependency graphs directly.
+## The Jitsi SDK
 
-4. Keep UnifiedPush registration and cleanup shared where practical.
-   The F-Droid build must continue to support delivery while the app is stopped,
-   account-specific Web Push subscriptions, renewal at startup, and subscription
-   deletion on logout.
-   The Play build may retain UnifiedPush alongside FCM so users can choose a
-   distributor without changing install source.
+Jitsi's released Android SDK can't be used:
+it depends on Jitsi's build of `react-native-google-signin`,
+and through it on Google Play services,
+and it is a prebuilt binary from Jitsi's own Maven repository.
 
-5. Add CI checks for both variants.
-   The Play check must confirm FCM registration and foreground/background
-   delivery still work.
-   The F-Droid check must fail if its resolved packages, Gradle dependency tree,
-   or APK contain Firebase, Google Play services, or other non-free artifacts.
-   It must also exercise UnifiedPush registration, foreground delivery,
-   background delivery, and logout cleanup.
+Instead, both variants use an SDK built from source
+vendored in `third_party/jitsi-meet`,
+without Google sign-in, live streaming, Share video (YouTube),
+or upstream's other non-free modules (Amplitude, Giphy).
+Run `tools/build-jitsi-sdk` once before building for Android,
+and again after changing that source;
+it needs Node.js 24+.
+See `third_party/jitsi-meet/README.consort.md`.
 
-6. Add F-Droid metadata only after the Firebase-free build is reproducible from
-   a tagged source release.
-   The metadata should invoke the checked-in F-Droid build path rather than
-   maintaining an undocumented downstream patch.
+## Remaining work
+
+- Review the remaining prebuilt artifacts against F-Droid's policy.
+  They come from Maven Central:
+  React Native (`com.facebook.react:react-android`), Hermes,
+  and Jitsi's build of WebRTC (`org.jitsi:webrtc`).
+- Confirm on devices that the Play APK receives FCM notifications,
+  and that the F-Droid APK asks for the notification permission
+  on Android 13+ and receives UnifiedPush notifications
+  while the app is stopped.
+- Add F-Droid metadata (in fdroiddata) once a tagged source release builds.
+  The recipe should run `tools/prepare-fdroid` and the build command above,
+  rather than maintain a downstream patch.
+  It will need to pin the Flutter version,
+  since this app tracks Flutter's `main` channel;
+  see the `environment` section of `pubspec.yaml`.
+- Choose and document the signing arrangement; see below.
 
 ## Package identity and signing
 
@@ -87,18 +119,6 @@ Before publishing either variant, choose and document the Play App Signing and
 F-Droid signing arrangement.
 If the stores use different signing keys, users must stay on one distribution
 channel or uninstall the app before switching, which removes local app data.
-
-## Completion criteria
-
-The distribution split is complete when:
-
-- both release commands build from a clean checkout;
-- both APKs report `chat.consort.mobile` and the expected version;
-- the Play APK receives FCM notifications;
-- the F-Droid APK contains no Firebase or Google Play services code;
-- the F-Droid APK receives UnifiedPush notifications with the app stopped;
-- signing and cross-store update behavior are documented; and
-- CI prevents Firebase from being reintroduced into the F-Droid artifact.
 
 See the F-Droid
 [Inclusion Policy](https://f-droid.org/en/docs/Inclusion_Policy/)

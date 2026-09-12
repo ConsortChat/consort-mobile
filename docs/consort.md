@@ -35,9 +35,9 @@ ordinary text-channel behavior, and call UI is gated by
 
 - Android already targets API 26 (the Jitsi SDK requires 24). The app manifest
   contains the merge directive required by the SDK.
-- Android distribution will be split into Google Play and F-Droid variants.
-  The F-Droid artifact must exclude Firebase from its dependency graph, not
-  merely disable Firebase at runtime. See
+- Android is built in Google Play and F-Droid variants.
+  The F-Droid variant excludes Firebase from its dependency graph, not
+  merely disabling Firebase at runtime. See
   [Android distribution variants](android-distribution.md).
 - iOS now targets 15.1 and declares camera and microphone usage. The Jitsi SDK
   supports Android and iOS, not the Flutter web/desktop targets.

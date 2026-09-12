@@ -125,7 +125,9 @@ using the Flutter `main` channel:
    and `flutter upgrade` (see [Flutter version](#flutter-version) below).
 3. Ensure Flutter is correctly configured by running `flutter doctor`.
 4. Start the app with `flutter run`, or from your IDE.
-   On Android, first run `tools/build-jitsi-sdk` (it needs Node.js 24+).
+   On Android, first run `tools/build-jitsi-sdk` (it needs Node.js 24+),
+   and pass `--flavor play`
+   (see [Android distribution variants](docs/android-distribution.md)).
 
 Developing on Windows requires
 an [additional step](docs/setup.md#autocrlf):

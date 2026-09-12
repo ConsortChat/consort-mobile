@@ -49,11 +49,12 @@ If you're reading this page for the first time, see the sections on
 * Build both an Android App Bundle (AAB) and an APK, signed:
 
   ```
-  flutter build appbundle -Psigned && flutter build apk -Psigned
+  flutter build appbundle --flavor play -Psigned && flutter build apk --flavor play -Psigned
   ```
 
-  Look for these at `build/app/outputs/bundle/release/app-release.aab`
-  and `build/app/outputs/apk/release/app-release.apk` respectively.
+  Look for these at `build/app/outputs/bundle/playRelease/app-play-release.aab`
+  and `build/app/outputs/apk/play/release/app-play-release.apk` respectively.
+  (For the F-Droid build, see [Android distribution variants](android-distribution.md).)
   Check their creation dates (`ls -la`) to avoid accidentally re-uploading
   the previous release.
 

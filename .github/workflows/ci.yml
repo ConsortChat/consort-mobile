@@ -50,6 +50,46 @@ jobs:
     - name: Run tools/check
       run: TERM=dumb tools/check --all --output ci android
 
+  android-fdroid:
+    name: "Android F-Droid build"
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Clone Flutter SDK
+      run: tools/ci/clone-flutter-sdk
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 24
+
+    - name: Build the Jitsi Meet SDK from source
+      run: tools/build-jitsi-sdk
+
+    - name: Remove Firebase from our dependencies
+      run: tools/prepare-fdroid
+
+    - name: Build F-Droid APK
+      # This fails if the F-Droid variant depends on Firebase or
+      # Google Play services; see android/app/build.gradle.
+      run: flutter build apk --flavor fdroid -t lib/main_fdroid.dart
+
+    - name: Check APK has no Firebase or Google Play services code
+      run: |
+        unzip -p build/app/outputs/flutter-apk/app-fdroid-release.apk 'classes*.dex' \
+          > "$RUNNER_TEMP"/classes.dex
+        if grep -aqE 'Lcom/google/(firebase|android/gms)/' "$RUNNER_TEMP"/classes.dex; then
+          echo "::error::The F-Droid APK contains Firebase or Google Play services code."
+          exit 1
+        fi
+
   ios:
     name: "iOS build and lint"
     runs-on: macos-26

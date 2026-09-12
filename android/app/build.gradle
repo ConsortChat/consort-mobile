@@ -26,6 +26,27 @@ try {
     keystoreProperties = null
 }
 
+// The F-Droid variant must not include Firebase or Google Play services.
+// Those come in through Flutter plugins, which a product flavor can't exclude;
+// tools/prepare-fdroid removes them, and this checks that it did.
+// See docs/android-distribution.md.
+tasks.matching { it.name ==~ /preFdroid\w+Build/ }.configureEach { task ->
+    def buildType = (task.name =~ /^preFdroid(\w+)Build$/)[0][1]
+    def runtimeClasspath = configurations.named("fdroid${buildType}RuntimeClasspath")
+    task.doFirst {
+        def nonFree = runtimeClasspath.get().incoming.resolutionResult.allComponents
+                .collect { it.moduleVersion }
+                .findAll { it != null && it.group in ['com.google.firebase', 'com.google.android.gms'] }
+        if (!nonFree.isEmpty()) {
+            throw new GradleException(
+                    "The F-Droid variant depends on Firebase or Google Play services:\n" +
+                    "  ${nonFree.join('\n  ')}\n" +
+                    "To build it, first run tools/prepare-fdroid in a checkout dedicated to that. " +
+                    "To build the Google Play variant, use `--flavor play`.")
+        }
+    }
+}
+
 android {
     namespace "chat.consort.mobile"
 
@@ -51,6 +72,16 @@ android {
 
         testInstrumentationRunner "pl.leancode.patrol.PatrolJUnitRunner"
         testInstrumentationRunnerArguments clearPackageData: "true"
+    }
+
+    flavorDimensions "distribution"
+    productFlavors {
+        play {
+            dimension "distribution"
+        }
+        fdroid {
+            dimension "distribution"
+        }
     }
 
     signingConfigs {

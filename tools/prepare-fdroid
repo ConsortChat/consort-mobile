@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat >&2 <<EOF
+usage: tools/prepare-fdroid
+
+Remove Firebase from this checkout's Flutter dependencies,
+so that it can build the F-Droid variant of the app:
+  flutter build apk --release --flavor fdroid -t lib/main_fdroid.dart
+
+Flutter has no per-flavor dependencies, so this edits pubspec.yaml
+and pubspec.lock in place.  Run it only in a checkout dedicated to
+the F-Droid build, and don't commit the result.
+
+See docs/android-distribution.md.
+EOF
+    exit 2
+}
+
+if (( $# )); then usage; fi
+
+cd "$(dirname "$0")/.."
+
+# For consistent sorting, for `comm`.
+export LC_ALL=C
+
+nonfree_packages=( firebase_core firebase_messaging )
+
+for package in "${nonfree_packages[@]}"; do
+    if ! grep -q "^  ${package}:" pubspec.yaml; then
+        echo >&2 "error: ${package} not found in pubspec.yaml;" \
+            "was this checkout already prepared?"
+        exit 1
+    fi
+done
+
+# Print "PACKAGE VERSION" for each package in the given lockfile.
+lock_versions() {
+    awk '/^  [a-z0-9_]+:$/  { package = $1 }
+         /^    version: / { print package, $2 }' "$1" \
+        | sort
+}
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "${tmpdir}"' EXIT
+cp pubspec.lock "${tmpdir}"/pubspec.lock
+
+for package in "${nonfree_packages[@]}"; do
+    sed -i.orig -e "/^  ${package}:/d" pubspec.yaml
+done
+rm pubspec.yaml.orig
+
+# With pubspec.lock present, this only drops the packages
+# that are no longer needed; the rest stay at their locked versions.
+flutter pub get
+
+# Confirm that, so the F-Droid build is reproducible
+# from the checked-in pubspec.lock.
+changed=$(comm -13 <(lock_versions "${tmpdir}"/pubspec.lock) \
+                   <(lock_versions pubspec.lock))
+if [ -n "${changed}" ]; then
+    echo >&2 "error: pub changed these package versions; is pubspec.lock up to date?"
+    echo >&2 "${changed}"
+    exit 1
+fi
+
+if grep -E '^  (firebase_|_flutterfire)' pubspec.lock >&2; then
+    echo >&2 "error: Firebase packages remain in pubspec.lock (above)."
+    exit 1
+fi
+
+echo "Removed Firebase from the dependencies, for the F-Droid build."
