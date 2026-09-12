@@ -5,6 +5,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
    <uses-permission android:name="android.permission.INTERNET"/>
+   <!-- In the Google Play build, firebase-messaging's manifest also declares this.
+        The F-Droid build has no Firebase, so declare it here. -->
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
    <application
         android:label="Consort"
         android:name="${applicationName}"

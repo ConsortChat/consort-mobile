@@ -4,8 +4,6 @@ import 'dart:convert';
 import 'package:clock/clock.dart';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
@@ -394,17 +392,15 @@ class TestZulipBinding extends ZulipBinding {
   Future<sodium.Sodium> sodiumInit() async => FakeSodium();
 
   void _resetFirebase() {
-    _firebaseInitialized = false;
+    hasRemotePushNotifications = true;
     _firebaseMessaging = null;
   }
 
-  bool _firebaseInitialized = false;
-  FakeFirebaseMessaging? _firebaseMessaging;
+  /// Whether [remotePushNotifications] should be present,
+  /// or null as in the F-Droid build.
+  bool hasRemotePushNotifications = true;
 
-  @override
-  Future<void> firebaseInitializeApp({required FirebaseOptions options}) async {
-    _firebaseInitialized = true;
-  }
+  FakeFirebaseMessaging? _firebaseMessaging;
 
   /// The value `firebaseMessaging.getToken` will initialize the token to.
   ///
@@ -413,19 +409,13 @@ class TestZulipBinding extends ZulipBinding {
     (_firebaseMessaging ??= FakeFirebaseMessaging())._initialToken = value;
   }
 
-  @override
   FakeFirebaseMessaging get firebaseMessaging {
-    assert(_firebaseInitialized);
     return (_firebaseMessaging ??= FakeFirebaseMessaging());
   }
 
   @override
-  Stream<RemoteMessage> get firebaseMessagingOnMessage => firebaseMessaging.onMessage.stream;
-
-  @override
-  void firebaseMessagingOnBackgroundMessage(BackgroundMessageHandler handler) {
-    firebaseMessaging.onBackgroundMessage.stream.listen(handler);
-  }
+  FakeFirebaseMessaging? get remotePushNotifications =>
+    hasRemotePushNotifications ? firebaseMessaging : null;
 
   void _resetUnifiedPush() {
     _unifiedPush = null;
@@ -719,24 +709,18 @@ class FakeSodiumSecretBox extends Fake implements sodium.SecretBox {
   }
 }
 
-class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
+class FakeFirebaseMessaging extends Fake implements RemotePushNotifications {
+  bool _initialized = false;
+
+  @override
+  Future<void> initialize() async {
+    _initialized = true;
+  }
+
   //|//////////////////////////////
   // Permissions.
 
-  NotificationSettings requestPermissionResult = const NotificationSettings(
-    alert: AppleNotificationSetting.enabled,
-    announcement: AppleNotificationSetting.disabled,
-    authorizationStatus: AuthorizationStatus.authorized,
-    badge: AppleNotificationSetting.enabled,
-    carPlay: AppleNotificationSetting.disabled,
-    lockScreen: AppleNotificationSetting.enabled,
-    notificationCenter: AppleNotificationSetting.enabled,
-    showPreviews: AppleShowPreviewSetting.whenAuthenticated,
-    timeSensitive: AppleNotificationSetting.disabled,
-    criticalAlert: AppleNotificationSetting.disabled,
-    sound: AppleNotificationSetting.enabled,
-    providesAppNotificationSettings: AppleNotificationSetting.disabled,
-  );
+  PushAuthorizationStatus requestPermissionResult = PushAuthorizationStatus.authorized;
 
   List<FirebaseMessagingRequestPermissionCall> takeRequestPermissionCalls() {
     final result = _requestPermissionCalls;
@@ -746,7 +730,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   List<FirebaseMessagingRequestPermissionCall> _requestPermissionCalls = [];
 
   @override
-  Future<NotificationSettings> requestPermission({
+  Future<PushAuthorizationStatus> requestPermission({
     bool alert = true,
     bool announcement = false,
     bool badge = true,
@@ -756,6 +740,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
     bool sound = true,
     bool providesAppNotificationSettings = false,
   }) async {
+    assert(_initialized);
     _requestPermissionCalls.add((
       alert: alert,
       announcement: announcement,
@@ -789,13 +774,12 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
     StreamController<String>.broadcast();
 
   @override
-  Future<String?> getToken({String? vapidKey, String? serviceWorkerScriptPath}) async {
-    assert(vapidKey == null);
-    assert(serviceWorkerScriptPath == null);
+  Future<String?> getToken() async {
+    assert(_initialized);
     if (_token == null) {
       assert(_initialToken != null,
         'Tests that call [NotificationService.start], or otherwise cause'
-        ' a call to `ZulipBinding.instance.firebaseMessaging.getToken`,'
+        ' a call to `ZulipBinding.instance.remotePushNotifications.getToken`,'
         ' must set `testBinding.firebaseMessagingInitialToken` first.');
 
       // This causes [onTokenRefresh] to fire, just like the real [getToken]
@@ -810,6 +794,7 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
 
   @override
   Future<String?> getAPNSToken() async {
+    assert(_initialized);
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
@@ -829,13 +814,23 @@ class FakeFirebaseMessaging extends Fake implements FirebaseMessaging {
   //|//////////////////////////////
   // Messages.
 
-  StreamController<RemoteMessage> onMessage = StreamController.broadcast();
+  /// Controls [foregroundMessages].
+  StreamController<RemotePushMessage> onMessage = StreamController.broadcast();
 
-  /// Controls [TestZulipBinding.firebaseMessagingOnBackgroundMessage].
+  @override
+  Stream<RemotePushMessage> get foregroundMessages => onMessage.stream;
+
+  /// Controls [setBackgroundMessageHandler].
   ///
   /// Calling [StreamController.add] on this will cause a call
   /// to any handler registered through that method.
-  StreamController<RemoteMessage> onBackgroundMessage = StreamController.broadcast();
+  StreamController<RemotePushMessage> onBackgroundMessage = StreamController.broadcast();
+
+  @override
+  void setBackgroundMessageHandler(RemotePushMessageHandler handler) {
+    assert(_initialized);
+    onBackgroundMessage.stream.listen(handler);
+  }
 }
 
 typedef FirebaseMessagingRequestPermissionCall = ({

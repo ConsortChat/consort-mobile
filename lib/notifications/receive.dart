@@ -3,13 +3,11 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../api/core.dart';
 import '../api/notifications.dart';
 import '../api/route/notifications.dart';
-import '../firebase_options.dart';
 import '../log.dart';
 import '../model/binding.dart';
 import '../model/push_key.dart';
@@ -39,14 +37,14 @@ class NotificationService {
 
   /// Whether a background isolate should initialize [LiveZulipBinding].
   ///
-  /// Ordinarily a [ZulipBinding.firebaseMessagingOnBackgroundMessage] callback
+  /// Ordinarily a [RemotePushNotifications.setBackgroundMessageHandler] callback
   /// will be invoked in a background isolate where it must set up its
   /// [ZulipBinding], just as the `main` function does for most of the app.
   /// Consequently, by default we have that callback initialize
   /// [LiveZulipBinding], just like `main` does.
   ///
   /// In a test that behavior is undesirable.  Tests that will cause
-  /// [ZulipBinding.firebaseMessagingOnBackgroundMessage] callbacks
+  /// [RemotePushNotifications.setBackgroundMessageHandler] callbacks
   /// to get invoked should therefore set this to false.
   static bool debugBackgroundIsolateIsLive = true;
 
@@ -69,20 +67,25 @@ class NotificationService {
   Future<void> start() async {
     await NotificationOpenService.instance.start();
 
+    final remotePush = ZulipBinding.instance.remotePushNotifications;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        await ZulipBinding.instance.firebaseInitializeApp(
-          options: kFirebaseOptionsAndroid);
-
         await NotificationDisplayManager.init();
         // Consort's server sends notifications by Web Push; see WebPushService.
         unawaited(WebPushService.instance.start());
-        ZulipBinding.instance.firebaseMessagingOnMessage
-          .listen(_onForegroundMessage);
-        ZulipBinding.instance.firebaseMessagingOnBackgroundMessage(
-          _onBackgroundMessage);
 
-        await _requestPermission(); // TODO(#324): defer if not logged into any accounts
+        if (remotePush == null) {
+          // This build has no FCM (it's the F-Droid build),
+          // so Firebase won't request the notification permission for us.
+          await ZulipBinding.instance.androidNotificationHost
+            .requestNotificationPermission(); // TODO(#324): defer if not logged into any accounts
+          return;
+        }
+        await remotePush.initialize();
+        remotePush.foregroundMessages.listen(_onForegroundMessage);
+        remotePush.setBackgroundMessageHandler(onBackgroundMessage);
+
+        await _requestPermission(remotePush); // TODO(#324): defer if not logged into any accounts
         // On Android, the notification permission is only about showing
         // notifications in the UI, not about getting notification data in the
         // background.  Even if the app lacks permission to show notifications
@@ -92,22 +95,22 @@ class NotificationService {
 
         // Get the FCM registration token, now and upon changes.  See FCM API docs:
         //   https://firebase.google.com/docs/cloud-messaging/android/client#sample-register
-        ZulipBinding.instance.firebaseMessaging.onTokenRefresh
+        remotePush.onTokenRefresh
           .listen(_onTokenRefresh);
-        await _getFcmToken();
+        await _getFcmToken(remotePush);
 
       case TargetPlatform.iOS: // TODO(#324): defer requesting notif permission
-        await ZulipBinding.instance.firebaseInitializeApp(
-          options: kFirebaseOptionsIos);
+        if (remotePush == null) return;
+        await remotePush.initialize();
 
-        if (!await _requestPermission()) {
+        if (!await _requestPermission(remotePush)) {
           // TODO(#324): request only "provisional" permission at this stage:
           //   https://github.com/zulip/zulip-flutter/issues/324#issuecomment-1771400325
           //   then proceed to get and use the token just like on Android
           return;
         }
 
-        await _getApnsToken();
+        await _getApnsToken(remotePush);
         // TODO does iOS need token refresh too?
 
       case TargetPlatform.linux:
@@ -119,23 +122,22 @@ class NotificationService {
     }
   }
 
-  Future<bool> _requestPermission() async {
+  Future<bool> _requestPermission(RemotePushNotifications remotePush) async {
     // Docs on this API: https://firebase.flutter.dev/docs/messaging/permissions/
-    final settings = await ZulipBinding.instance.firebaseMessaging
-      .requestPermission();
-    assert(debugLog('notif authorization: ${settings.authorizationStatus}'));
-    switch (settings.authorizationStatus) {
-      case AuthorizationStatus.denied:
+    final status = await remotePush.requestPermission();
+    assert(debugLog('notif authorization: $status'));
+    switch (status) {
+      case PushAuthorizationStatus.denied:
         return false;
-      case AuthorizationStatus.authorized:
-      case AuthorizationStatus.provisional:
-      case AuthorizationStatus.notDetermined:
+      case PushAuthorizationStatus.authorized:
+      case PushAuthorizationStatus.provisional:
+      case PushAuthorizationStatus.notDetermined:
         return true;
     }
   }
 
-  Future<void> _getFcmToken() async {
-    final value = await ZulipBinding.instance.firebaseMessaging.getToken();
+  Future<void> _getFcmToken(RemotePushNotifications remotePush) async {
+    final value = await remotePush.getToken();
     // TODO(#323) warn user if getToken returns null, or doesn't timely return
     assert(debugLog("notif FCM token: $value"));
     // The call to `getToken` won't cause `onTokenRefresh` to fire if we
@@ -144,8 +146,8 @@ class NotificationService {
     token.value = value;
   }
 
-  Future<void> _getApnsToken() async {
-    final value = await ZulipBinding.instance.firebaseMessaging.getAPNSToken();
+  Future<void> _getApnsToken(RemotePushNotifications remotePush) async {
+    final value = await remotePush.getAPNSToken();
     // TODO(#323) warn user if getAPNSToken returns null, or doesn't timely return
     assert(debugLog("notif APNs token: $value"));
     token.value = value;
@@ -179,18 +181,13 @@ class NotificationService {
     }
   }
 
-  static void _onForegroundMessage(FirebaseRemoteMessage message) {
+  static void _onForegroundMessage(RemotePushMessage message) {
     assert(debugLog("notif message: ${message.data}"));
     _onRemoteMessage(message);
   }
 
-  // This pragma `vm:entry-point` is needed in release mode, when this method
-  // is needed at all (i.e. on Android):
-  //   https://firebase.google.com/docs/cloud-messaging/flutter/receive#background_messages
-  //   https://github.com/firebase/flutterfire/issues/9446#issuecomment-1240554285
-  //   https://github.com/zulip/zulip-flutter/issues/528#issuecomment-1960646800
-  @pragma('vm:entry-point')
-  static Future<void> _onBackgroundMessage(FirebaseRemoteMessage message) async {
+  /// The handler for [RemotePushNotifications.setBackgroundMessageHandler].
+  static Future<void> onBackgroundMessage(RemotePushMessage message) async {
     // This callback will run in a separate isolate from the rest of the app.
     // See docs:
     //   https://firebase.flutter.dev/docs/messaging/usage/#background-messages
@@ -210,7 +207,7 @@ class NotificationService {
       return;
     }
 
-    // Compare these setup steps to the ones in `main` in lib/main.dart .
+    // Compare these setup steps to the ones in `runMain` in lib/main_common.dart .
     assert(() {
       debugLogEnabled = true;
       return true;
@@ -219,7 +216,7 @@ class NotificationService {
     NotificationDisplayManager.init(); // TODO call this just once per isolate
   }
 
-  static void _onRemoteMessage(FirebaseRemoteMessage message) async {
+  static void _onRemoteMessage(RemotePushMessage message) async {
     assert(defaultTargetPlatform == TargetPlatform.android);
     final origData = message.data;
 

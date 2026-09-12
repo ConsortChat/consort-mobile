@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http_testing;
@@ -60,7 +59,7 @@ Future<Uint8List> encryptNotification(Uint8List pushKey, Uint8List plaintext) as
 /// that the payload is addressed to.
 /// Otherwise, produce a legacy non-E2EE notification.
 // TODO(server-12): cut the `LegacyFcmMessageWithIdentity` case
-Future<RemoteMessage> encodeFcmMessage(NotifPayloadWithIdentity data) async {
+Future<RemotePushMessage> encodeFcmMessage(NotifPayloadWithIdentity data) async {
   final Map<String, dynamic> payload;
   if (data is LegacyFcmMessageWithIdentity) {
     // Legacy plaintext notification.
@@ -78,7 +77,7 @@ Future<RemoteMessage> encodeFcmMessage(NotifPayloadWithIdentity data) async {
       'encrypted_data': base64Encode(encrypted),
     };
   }
-  return RemoteMessage(data: payload);
+  return RemotePushMessage(data: payload);
 }
 
 NotifPayloadNewMessage notifPayloadNewMessage(

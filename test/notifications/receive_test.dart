@@ -16,7 +16,7 @@ void main() {
     await NotificationService.instance.start();
   }
 
-  // The calls to firebaseMessagingOnMessage and firebaseMessagingOnBackgroundMessage
+  // The calls to foregroundMessages and setBackgroundMessageHandler
   // are tested end-to-end in `display_test.dart`, by posting FCM messages
   // to the respective streams and checking that the right logic then runs.
 
@@ -27,6 +27,17 @@ void main() {
       await init();
       check(testBinding.firebaseMessaging.takeRequestPermissionCalls())
         .length.equals(1);
+      check(testBinding.androidNotificationHost.takeRequestNotificationPermissionCallCount())
+        .equals(0);
     }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
+
+    testWidgets('no remote push: request permission from Android', (tester) async {
+      testBinding.hasRemotePushNotifications = false;
+      await init();
+      check(testBinding.androidNotificationHost.takeRequestNotificationPermissionCallCount())
+        .equals(1);
+      check(testBinding.firebaseMessaging.takeRequestPermissionCalls()).isEmpty();
+      check(NotificationService.instance.token.value).isNull();
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   });
 }

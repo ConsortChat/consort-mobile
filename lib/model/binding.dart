@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart' as connectivity_plus;
 import 'package:device_info_plus/device_info_plus.dart' as device_info_plus;
 import 'package:file_picker/file_picker.dart' as file_picker;
-import 'package:firebase_core/firebase_core.dart' as firebase_core;
-import 'package:firebase_messaging/firebase_messaging.dart' as firebase_messaging;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart' as image_picker;
@@ -30,9 +28,6 @@ export 'package:image_picker/image_picker.dart' show ImageSource, XFile;
 
 /// Alias for [url_launcher.LaunchMode].
 typedef UrlLaunchMode = url_launcher.LaunchMode;
-
-/// Alias for [firebase_messaging.RemoteMessage].
-typedef FirebaseRemoteMessage = firebase_messaging.RemoteMessage;
 
 /// A singleton service providing the app's data and use of Flutter plugins.
 ///
@@ -220,20 +215,12 @@ abstract class ZulipBinding {
   /// This wraps [SodiumInit.init].
   FutureOr<Sodium> sodiumInit();
 
-  /// Initialize Firebase, to use for notifications.
+  /// The remote-push service for notifications, or null if this build has none.
   ///
-  /// This wraps [firebase_core.Firebase.initializeApp].
-  Future<void> firebaseInitializeApp({
-      required firebase_core.FirebaseOptions options});
-
-  /// Wraps [firebase_messaging.FirebaseMessaging.instance].
-  firebase_messaging.FirebaseMessaging get firebaseMessaging;
-
-  /// Wraps [firebase_messaging.FirebaseMessaging.onMessage].
-  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage;
-
-  /// Wraps [firebase_messaging.FirebaseMessaging.onBackgroundMessage].
-  void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler);
+  /// This is FCM in the Google Play and iOS builds of the app.
+  /// It is null in the F-Droid build, which gets notifications only through
+  /// [unifiedPush]; see docs/android-distribution.md.
+  RemotePushNotifications? get remotePushNotifications;
 
   /// Wraps [UnifiedPushPlatform.instance],
   /// for receiving notifications through UnifiedPush on Android.
@@ -430,6 +417,55 @@ class NotificationPigeonApi {
     notif_pigeon.notificationTapEvents();
 }
 
+/// A remote-push service for notifications, like FCM.
+///
+/// This abstracts over package:firebase_messaging,
+/// which only some builds of the app include;
+/// the implementation is in lib/notifications/firebase.dart.
+///
+/// The members correspond to those of `FirebaseMessaging`.
+abstract class RemotePushNotifications {
+  /// Initialize the service; call this before using the other members.
+  Future<void> initialize();
+
+  Future<PushAuthorizationStatus> requestPermission({
+    bool alert = true,
+    bool announcement = false,
+    bool badge = true,
+    bool carPlay = false,
+    bool criticalAlert = false,
+    bool provisional = false,
+    bool sound = true,
+    bool providesAppNotificationSettings = false,
+  });
+
+  Future<String?> getToken();
+
+  Stream<String> get onTokenRefresh;
+
+  Future<String?> getAPNSToken();
+
+  /// The messages received while the app is in the foreground.
+  Stream<RemotePushMessage> get foregroundMessages;
+
+  /// Set the handler for messages received while the app is in the background.
+  ///
+  /// The handler may be called in a separate isolate.
+  void setBackgroundMessageHandler(RemotePushMessageHandler handler);
+}
+
+typedef RemotePushMessageHandler = Future<void> Function(RemotePushMessage message);
+
+/// Like firebase_messaging's `RemoteMessage`, but without things we don't use.
+class RemotePushMessage {
+  final Map<String, dynamic> data;
+
+  const RemotePushMessage({required this.data});
+}
+
+/// Like firebase_messaging's `AuthorizationStatus`.
+enum PushAuthorizationStatus { authorized, denied, notDetermined, provisional }
+
 /// A concrete binding for use in the live application.
 ///
 /// The global store returned by [getGlobalStore], and consequently by
@@ -439,7 +475,7 @@ class NotificationPigeonApi {
 /// Methods wrapping a plugin, like [launchUrl], invoke the actual
 /// underlying plugin method.
 class LiveZulipBinding extends ZulipBinding {
-  LiveZulipBinding() {
+  LiveZulipBinding({this.remotePushNotifications}) {
     _deviceInfo = _prefetchDeviceInfo();
     _packageInfo = _prefetchPackageInfo();
 
@@ -454,9 +490,14 @@ class LiveZulipBinding extends ZulipBinding {
   }
 
   /// Initialize the binding if necessary, and ensure it is a [LiveZulipBinding].
-  static LiveZulipBinding ensureInitialized() {
+  ///
+  /// If this creates the binding, the binding will use [remotePushNotifications]
+  /// as its [ZulipBinding.remotePushNotifications].
+  static LiveZulipBinding ensureInitialized({
+    RemotePushNotifications? remotePushNotifications,
+  }) {
     if (ZulipBinding._instance == null) {
-      LiveZulipBinding();
+      LiveZulipBinding(remotePushNotifications: remotePushNotifications);
     }
     return ZulipBinding.instance as LiveZulipBinding;
   }
@@ -669,25 +710,7 @@ class LiveZulipBinding extends ZulipBinding {
   FutureOr<Sodium> sodiumInit() => SodiumInit.init();
 
   @override
-  Future<void> firebaseInitializeApp({
-      required firebase_core.FirebaseOptions options}) {
-    return firebase_core.Firebase.initializeApp(options: options);
-  }
-
-  @override
-  firebase_messaging.FirebaseMessaging get firebaseMessaging {
-    return firebase_messaging.FirebaseMessaging.instance;
-  }
-
-  @override
-  Stream<firebase_messaging.RemoteMessage> get firebaseMessagingOnMessage {
-    return firebase_messaging.FirebaseMessaging.onMessage;
-  }
-
-  @override
-  void firebaseMessagingOnBackgroundMessage(firebase_messaging.BackgroundMessageHandler handler) {
-    firebase_messaging.FirebaseMessaging.onBackgroundMessage(handler);
-  }
+  final RemotePushNotifications? remotePushNotifications;
 
   @override
   UnifiedPushPlatform get unifiedPush => UnifiedPushPlatform.instance;
