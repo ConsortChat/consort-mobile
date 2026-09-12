@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mirrors assets/app-icons/consort-notification.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M122.5 327.5A82.5 82.5 0 0 1 287.5 327.5L287.5 672.5A82.5 82.5 0 0 1 122.5 672.5ZM332.5 167.5A82.5 82.5 0 0 1 497.5 167.5L497.5 832.5A82.5 82.5 0 0 1 332.5 832.5ZM542.5 267.5A82.5 82.5 0 0 1 707.5 267.5L707.5 732.5A82.5 82.5 0 0 1 542.5 732.5ZM752.5 397.5A82.5 82.5 0 0 1 917.5 397.5L917.5 602.5A82.5 82.5 0 0 1 752.5 602.5Z"/>
+</vector>

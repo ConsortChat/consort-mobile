@@ -153,8 +153,13 @@ make_android() {
     # Launcher icons go into mipmaps:
     #   https://developer.android.com/training/multiscreen/screendensities#mipmap
     make_android_icon "${src_icon_background}" 108 main mipmap ic_launcher_background
-    make_android_icon "${src_icon_foreground}" 48 main mipmap ic_launcher_monochrome
-    make_android_icon "${src_notification_icon}" 24 main drawable consort_notification
+
+    # The waveform itself (${src_icon_foreground}, ${src_notification_icon})
+    # is hand-translated into vector drawables, so its rounded bar ends
+    # stay smooth at any size:
+    #   android/app/src/main/res/drawable/ic_launcher_monochrome.xml
+    #   android/app/src/main/res/drawable/consort_notification.xml
+    # Keep those in sync when editing the SVGs.
 }
 
 make_ios
