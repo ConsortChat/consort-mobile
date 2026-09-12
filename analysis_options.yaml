@@ -11,6 +11,9 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # Vendored; see third_party/jitsi-meet/README.consort.md.
+    - packages/jitsi_meet_flutter_sdk/**
+    - third_party/**
   language:
     strict-inference: true
     strict-raw-types: true
