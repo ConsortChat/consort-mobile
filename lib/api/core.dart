@@ -151,9 +151,13 @@ class ApiConnection {
 
   bool _isOpen = true;
 
-  Future<T> send<T>(String routeName, T Function(Map<String, dynamic>) fromJson,
+  /// Add this connection's auth and User-Agent headers to [request],
+  /// then send it, returning the response's status and headers.
+  ///
+  /// The response's body has not been read yet.
+  Future<http.StreamedResponse> _sendRequest(String routeName,
     http.BaseRequest request, {
-    bool useAuth = true,
+    required bool useAuth,
     String? overrideUserAgent,
   }) async {
     assert(_isOpen);
@@ -176,12 +180,45 @@ class ApiConnection {
       addUserAgent(request);
     }
 
-    final http.StreamedResponse response;
     try {
-      response = await _client.send(request);
+      return await _client.send(request);
     } catch (e) {
       _throwNetworkException(routeName, e);
     }
+  }
+
+  /// Send [request], and return the response without interpreting its body.
+  ///
+  /// Unlike [send], this assumes nothing about the response:
+  /// not that its status is 200, nor that its body is JSON.
+  /// The caller is responsible for interpreting the status, headers, and body.
+  ///
+  /// This is for protocols that communicate through response headers and
+  /// statuses other than 200, like tus; see [uploadFileResumably].
+  /// For ordinary Zulip API routes, use [send].
+  Future<http.Response> sendRaw(String routeName, http.BaseRequest request, {
+    bool useAuth = true,
+  }) async {
+    final response = await _sendRequest(routeName, request, useAuth: useAuth);
+    try {
+      return await http.Response.fromStream(response);
+    } on http.ClientException catch (e) {
+      // A network error, like the connection being interrupted partway
+      // through receiving the response body.
+      _throwNetworkException(routeName, e);
+    } on IOException catch (e) {
+      // As above: a network error, arriving with its original type.
+      _throwNetworkException(routeName, e);
+    }
+  }
+
+  Future<T> send<T>(String routeName, T Function(Map<String, dynamic>) fromJson,
+    http.BaseRequest request, {
+    bool useAuth = true,
+    String? overrideUserAgent,
+  }) async {
+    final response = await _sendRequest(routeName, request,
+      useAuth: useAuth, overrideUserAgent: overrideUserAgent);
 
     final int httpStatus = response.statusCode;
     Map<String, dynamic>? json;
@@ -213,7 +250,7 @@ class ApiConnection {
     }
 
     if (httpStatus != 200 || json == null) {
-      throw _makeApiException(routeName, httpStatus, json);
+      throw makeApiException(routeName, httpStatus, json);
     }
 
     try {
@@ -382,7 +419,16 @@ Never _throwNetworkException(String routeName, Object cause) {
     kind: kind, cause: cause, message: message);
 }
 
-ApiRequestException _makeApiException(String routeName, int httpStatus, Map<String, dynamic>? json) {
+/// Construct the exception for a response with an error status.
+///
+/// [json] is the response body decoded as a JSON object,
+/// or null if it couldn't be read as one.
+///
+/// This is exposed for callers that read a response themselves rather than
+/// through [ApiConnection.send], like [uploadFileResumably];
+/// they interpret the response's own statuses, then delegate the error
+/// statuses here so that errors look the same across the API.
+ApiRequestException makeApiException(String routeName, int httpStatus, Map<String, dynamic>? json) {
   assert(httpStatus != 200 || json == null);
   if (400 <= httpStatus && httpStatus <= 499) {
     if (json != null && json['result'] == 'error'

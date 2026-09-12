@@ -13,6 +13,7 @@ import 'package:path/path.dart' as path;
 import '../api/exception.dart';
 import '../api/model/model.dart';
 import '../api/route/messages.dart';
+import '../api/route/tus.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../log.dart';
 import '../model/binding.dart';
@@ -1042,13 +1043,22 @@ Future<void> _uploadFiles({
     final FileToUpload(:content, :length, :filename, :mimeType) = file;
     String? url;
     try {
-      final result = await uploadFile(store.connection,
-        content: content,
-        length: length,
-        filename: filename,
-        contentType: mimeType,
-      );
-      url = result.url;
+      // The tus endpoint sends the file in chunks, so that a large file
+      // doesn't depend on one very large request surviving intact.
+      // TODO(server-10): Drop the [uploadFile] fallback; always use tus.
+      url = store.zulipFeatureLevel >= 296
+        ? await uploadFileResumably(store.connection,
+            content: content,
+            length: length,
+            filename: filename,
+            contentType: mimeType,
+          )
+        : (await uploadFile(store.connection,
+            content: content,
+            length: length,
+            filename: filename,
+            contentType: mimeType,
+          )).url;
     } catch (e) {
       if (!context.mounted) return;
       // TODO(#741): Specifically handle `413 Payload Too Large`

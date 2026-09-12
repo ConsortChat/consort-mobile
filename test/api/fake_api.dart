@@ -25,6 +25,7 @@ class _PreparedException extends _PreparedResponse {
 
 class _PreparedSuccess extends _PreparedResponse {
   final int httpStatus;
+  final Map<String, String> headers;
   final List<int> bytes;
   final Duration bodyDelay;
   final Object? bodyException;
@@ -32,6 +33,7 @@ class _PreparedSuccess extends _PreparedResponse {
   _PreparedSuccess({
     super.delay,
     required this.httpStatus,
+    this.headers = const {},
     required this.bytes,
     this.bodyDelay = Duration.zero,
     this.bodyException,
@@ -77,6 +79,7 @@ class FakeHttpClient extends http.BaseClient {
   void prepare({
     Object? exception,
     int? httpStatus,
+    Map<String, String>? headers,
     Map<String, dynamic>? json,
     String? body,
     Object? bodyException,
@@ -86,7 +89,8 @@ class FakeHttpClient extends http.BaseClient {
     // TODO: Prevent a source of bugs by ensuring that there are no outstanding
     //   prepared responses when the test ends.
     if (exception != null) {
-      assert(httpStatus == null && json == null && body == null
+      assert(httpStatus == null && headers == null && json == null
+        && body == null
         && bodyException == null && bodyDelay == Duration.zero);
       _preparedResponses.addLast(_PreparedException(exception: exception, delay: delay));
     } else {
@@ -98,6 +102,7 @@ class FakeHttpClient extends http.BaseClient {
       };
       _preparedResponses.addLast(_PreparedSuccess(
         httpStatus: httpStatus ?? 200,
+        headers: headers ?? const {},
         bytes: utf8.encode(resolvedBody),
         bodyException: bodyException,
         delay: delay,
@@ -132,12 +137,12 @@ class FakeHttpClient extends http.BaseClient {
     switch (response) {
       case _PreparedException(:var exception):
         computation = () => throw exception;
-      case _PreparedSuccess(:var bytes, :var httpStatus, :var bodyDelay,
-                            :var bodyException):
+      case _PreparedSuccess(:var bytes, :var httpStatus, :var headers,
+                            :var bodyDelay, :var bodyException):
         computation = () => http.StreamedResponse(
           _bodyStream(request, bytes: bytes, bodyDelay: bodyDelay,
             bodyException: bodyException, abortTrigger: abortTrigger),
-          httpStatus, request: request);
+          httpStatus, headers: headers, request: request);
     }
     final result = Future.delayed(response.delay, computation);
     if (abortTrigger == null) return result;
@@ -315,6 +320,7 @@ class FakeApiConnection extends ApiConnection {
     Object? httpException,
     ZulipApiException? apiException,
     int? httpStatus,
+    Map<String, String>? headers,
     Map<String, dynamic>? json,
     String? body,
     Object? bodyException,
@@ -343,7 +349,8 @@ class FakeApiConnection extends ApiConnection {
 
     if (apiException != null) {
       assert(httpException == null && bodyException == null
-        && httpStatus == null && json == null && body == null);
+        && httpStatus == null && headers == null && json == null
+        && body == null);
       httpStatus = apiException.httpStatus;
       json = {
         'result': 'error',
@@ -355,7 +362,7 @@ class FakeApiConnection extends ApiConnection {
 
     client.prepare(
       exception: httpException,
-      httpStatus: httpStatus, json: json, body: body,
+      httpStatus: httpStatus, headers: headers, json: json, body: body,
       bodyException: bodyException,
       delay: delay, bodyDelay: bodyDelay,
     );

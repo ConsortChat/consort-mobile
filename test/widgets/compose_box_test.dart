@@ -47,6 +47,37 @@ import 'checks.dart';
 import 'dialog_checks.dart';
 import 'test_app.dart';
 
+/// Prepare the responses for one tus upload, resulting in [url].
+///
+/// An upload takes two requests: one creating it, and one carrying its
+/// content.  The creation request takes [delay] to complete,
+/// so that the upload as a whole takes that long.
+void prepareUpload(FakeApiConnection connection, String url, {
+  Duration delay = Duration.zero,
+}) {
+  connection.prepare(delay: delay, httpStatus: 201,
+    headers: {'tus-resumable': '1.0.0', 'location': '/api/v1/tus/1AbCdEf'});
+  connection.prepare(httpStatus: 200,
+    json: {'url': url, 'filename': url.split('/').last});
+}
+
+/// Check that [request] creates a tus upload for a file with these properties.
+///
+/// The file's content goes in a later request; see [uploadFileResumably].
+void checkUploadCreateRequest(http.BaseRequest request, {
+  required int length,
+  required String filename,
+  required String contentType,
+}) {
+  check(request)
+    ..method.equals('POST')
+    ..url.path.equals('/api/v1/tus');
+  check(request.headers['upload-length']).equals(length.toString());
+  check(request.headers['upload-metadata']).equals(
+    'filename ${base64.encode(utf8.encode(filename))}'
+    ',filetype ${base64.encode(utf8.encode(contentType))}');
+}
+
 void main() {
   TestZulipBinding.ensureInitialized();
   MessageListPage.debugEnableMarkReadOnScroll = false;
@@ -1321,8 +1352,9 @@ void main() {
             length: 12345,
             path: '/data/user/0/chat.consort.mobile/cache/image.jpg',
           )];
-          connection.prepare(delay: const Duration(seconds: 1), json:
-            UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
+          prepareUpload(connection,
+            '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg',
+            delay: const Duration(seconds: 1));
 
           await tester.tap(find.byIcon(ZulipIcons.image));
           await tester.pump();
@@ -1334,16 +1366,8 @@ void main() {
           check(controller!.content.text)
             .equals('see image: [Uploading image.jpg…]()\n\n');
           // (the request is checked more thoroughly in API tests)
-          check(connection.lastRequest!).isA<http.MultipartRequest>()
-            ..method.equals('POST')
-            ..files.single.which((it) => it
-              ..field.equals('file')
-              ..length.equals(12345)
-              ..filename.equals('image.jpg')
-              ..contentType.asString.equals('image/jpeg')
-              ..has<Future<List<int>>>((f) => f.finalize().toBytes(), 'contents')
-                .completes((it) => it.deepEquals(['asdf'.codeUnits].expand((l) => l)))
-            );
+          checkUploadCreateRequest(connection.lastRequest!,
+            length: 12345, filename: 'image.jpg', contentType: 'image/jpeg');
           checkAppearsLoading(tester, true);
 
           await tester.pump(const Duration(seconds: 1));
@@ -1370,10 +1394,12 @@ void main() {
               length: 12345,
               path: '/data/user/0/chat.consort.mobile/cache/test.gif'),
           ];
-          connection.prepare(delay: const Duration(seconds: 1), json:
-            UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
-          connection.prepare(delay: const Duration(seconds: 1), json:
-            UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/test.gif').toJson());
+          prepareUpload(connection,
+            '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg',
+            delay: const Duration(seconds: 1));
+          prepareUpload(connection,
+            '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/test.gif',
+            delay: const Duration(seconds: 1));
 
           await tester.tap(find.byIcon(ZulipIcons.image));
           await tester.pump();
@@ -1413,8 +1439,8 @@ void main() {
               path: '/data/user/0/chat.consort.mobile/cache/image.jpg'),
             _UnreadableXFile('/data/user/0/chat.consort.mobile/cache/missing.jpg'),
           ];
-          connection.prepare(json:
-            UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
+          prepareUpload(connection,
+            '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg');
 
           await tester.tap(find.byIcon(ZulipIcons.image));
           await tester.pump();
@@ -1447,8 +1473,9 @@ void main() {
           name: 'image.jpg',
           size: 12345,
         )]);
-        connection.prepare(delay: const Duration(seconds: 1), json:
-          UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
+        prepareUpload(connection,
+          '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg',
+          delay: const Duration(seconds: 1));
 
         await tester.tap(find.byIcon(ZulipIcons.image));
         await tester.pump();
@@ -1461,16 +1488,8 @@ void main() {
         check(controller!.content.text)
           .equals('see image: [Uploading image.jpg…]()\n\n');
         // (the request is checked more thoroughly in API tests)
-        check(connection.lastRequest!).isA<http.MultipartRequest>()
-          ..method.equals('POST')
-          ..files.single.which((it) => it
-            ..field.equals('file')
-            ..length.equals(12345)
-            ..filename.equals('image.jpg')
-            ..contentType.asString.equals('image/jpeg')
-            ..has<Future<List<int>>>((f) => f.finalize().toBytes(), 'contents')
-              .completes((it) => it.deepEquals(['asdf'.codeUnits].expand((l) => l)))
-          );
+        checkUploadCreateRequest(connection.lastRequest!,
+          length: 12345, filename: 'image.jpg', contentType: 'image/jpeg');
         checkAppearsLoading(tester, true);
 
         await tester.pump(const Duration(seconds: 1));
@@ -1495,8 +1514,9 @@ void main() {
           length: 12345,
           path: '/private/var/mobile/Containers/Data/Application/foo/tmp/image.jpg',
         );
-        connection.prepare(delay: const Duration(seconds: 1), json:
-          UploadFileResult(url: '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg').toJson());
+        prepareUpload(connection,
+          '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/image.jpg',
+          delay: const Duration(seconds: 1));
 
         await tester.tap(find.byIcon(ZulipIcons.camera));
         await tester.pump();
@@ -1509,16 +1529,8 @@ void main() {
         check(controller!.content.text)
           .equals('see image: [Uploading image.jpg…]()\n\n');
         // (the request is checked more thoroughly in API tests)
-        check(connection.lastRequest!).isA<http.MultipartRequest>()
-          ..method.equals('POST')
-          ..files.single.which((it) => it
-            ..field.equals('file')
-            ..length.equals(12345)
-            ..filename.equals('image.jpg')
-            ..contentType.asString.equals('image/jpeg')
-            ..has<Future<List<int>>>((f) => f.finalize().toBytes(), 'contents')
-              .completes((it) => it.deepEquals(['asdf'.codeUnits].expand((l) => l)))
-          );
+        checkUploadCreateRequest(connection.lastRequest!,
+          length: 12345, filename: 'image.jpg', contentType: 'image/jpeg');
         checkAppearsLoading(tester, true);
 
         await tester.pump(const Duration(seconds: 1));
@@ -1548,8 +1560,8 @@ void main() {
         name: '한국어 파일.txt',
         size: 4,
       )]);
-      connection.prepare(json: UploadFileResult(url:
-        '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/한국어 파일.txt').toJson());
+      prepareUpload(connection,
+        '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/한국어 파일.txt');
       await tester.tap(find.byIcon(ZulipIcons.attach_file));
       await tester.pump();
       check(controller!.content.text)
@@ -1594,7 +1606,7 @@ void main() {
         const fileContent = [1, 0, 1, 0, 0];
         await prepare(tester);
         const uploadUrl = '/user_uploads/1/4e/m2A3MSqFnWRLUf9SaPzQ0Up_/test.gif';
-        connection.prepare(json: UploadFileResult(url: uploadUrl).toJson());
+        prepareUpload(connection, uploadUrl);
         await insertContentFromKeyboard(tester,
           data: fileContent,
           attachedFileUrl:
@@ -1606,16 +1618,9 @@ void main() {
         check(controller!.content.text)
           .equals('see image: [Uploading test.gif…]()\n\n');
         // (the request is checked more thoroughly in API tests)
-        check(connection.lastRequest!).isA<http.MultipartRequest>()
-          ..method.equals('POST')
-          ..files.single.which((it) => it
-            ..field.equals('file')
-            ..length.equals(fileContent.length)
-            ..filename.equals('test.gif')
-            ..contentType.asString.equals('image/gif')
-            ..has<Future<List<int>>>((f) => f.finalize().toBytes(), 'contents')
-              .completes((it) => it.deepEquals(fileContent))
-          );
+        checkUploadCreateRequest(connection.lastRequest!,
+          length: fileContent.length, filename: 'test.gif',
+          contentType: 'image/gif');
         checkAppearsLoading(tester, true);
 
         await tester.pump(Duration.zero);
@@ -2591,8 +2596,7 @@ void main() {
         // …and the upload buttons work.
         testBinding.pickFilesResult = FilePickerResult([
           PlatformFile(name: 'file.jpg', size: 1000, readStream: Stream.fromIterable(['asdf'.codeUnits]))]);
-        connection.prepare(json:
-          UploadFileResult(url: '/path/file.jpg').toJson());
+        prepareUpload(connection, '/path/file.jpg');
         await tester.tap(find.byIcon(ZulipIcons.attach_file), warnIfMissed: false);
         await tester.pump(Duration.zero);
         checkNoDialog(tester);
