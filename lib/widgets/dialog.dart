@@ -193,6 +193,7 @@ DialogStatus<void> showErrorDialog({
 /// If the dialog was canceled,
 /// either with the cancel button or by tapping outside the dialog's area,
 /// it completes with null.
+/// The cancel button is labeled "Cancel" unless [cancelButtonText] is given.
 ///
 /// The context argument should be a descendant of the app's main [Navigator].
 DialogStatus<bool> showSuggestedActionDialog({
@@ -201,6 +202,7 @@ DialogStatus<bool> showSuggestedActionDialog({
   String? message,
   required String? actionButtonText,
   bool destructiveActionButton = false,
+  String? cancelButtonText,
 }) {
   final zulipLocalizations = ZulipLocalizations.of(context);
   final future = showDialog<bool>(
@@ -212,7 +214,7 @@ DialogStatus<bool> showSuggestedActionDialog({
         _adaptiveAction(
           onPressed: () => Navigator.pop<bool>(context, null),
           isDefaultAction: false,
-          text: zulipLocalizations.dialogCancel),
+          text: cancelButtonText ?? zulipLocalizations.dialogCancel),
         _adaptiveAction(
           onPressed: () => Navigator.pop<bool>(context, true),
           isDefaultAction: true,

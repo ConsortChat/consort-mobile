@@ -123,6 +123,7 @@ void checkNoDialog(WidgetTester tester) {
   String? expectedMessage,
   String? expectedActionButtonText,
   bool expectDestructiveActionButton = false,
+  String? expectedCancelButtonText,
 }) {
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
@@ -140,7 +141,7 @@ void checkNoDialog(WidgetTester tester) {
       final actionButton = tester.widget(find.descendant(of: find.byWidget(dialog),
         matching: find.widgetWithText(TextButton, expectedActionButtonText ?? 'Continue')));
       final cancelButton = tester.widget(find.descendant(of: find.byWidget(dialog),
-        matching: find.widgetWithText(TextButton, 'Cancel')));
+        matching: find.widgetWithText(TextButton, expectedCancelButtonText ?? 'Cancel')));
       return (actionButton, cancelButton);
 
     case TargetPlatform.iOS:
@@ -161,7 +162,7 @@ void checkNoDialog(WidgetTester tester) {
             expectedActionButtonText ?? 'Continue')));
       check(actionButton.isDestructiveAction).equals(expectDestructiveActionButton);
       final cancelButton = tester.widget(find.descendant(of: find.byWidget(dialog),
-        matching: find.widgetWithText(CupertinoDialogAction, 'Cancel')));
+        matching: find.widgetWithText(CupertinoDialogAction, expectedCancelButtonText ?? 'Cancel')));
       return (actionButton, cancelButton);
   }
 }
