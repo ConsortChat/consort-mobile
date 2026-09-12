@@ -8,7 +8,6 @@ import { ASPECT_RATIO_WIDE } from '../../../base/responsive-ui/constants';
 import { setToolboxVisible } from '../../../toolbox/actions';
 
 import VideoManager from './VideoManager';
-import YoutubeVideoManager from './YoutubeVideoManager';
 import styles from './styles';
 
 interface IProps {
@@ -105,7 +104,8 @@ class SharedVideo extends Component<IProps> {
             videoUrl
         } = this.props;
 
-        if (!videoUrl) {
+        // Consort: YouTube playback is removed; only direct video URLs play.
+        if (!videoUrl?.match(/http/)) {
             return null;
         }
 
@@ -113,19 +113,10 @@ class SharedVideo extends Component<IProps> {
             <View
                 pointerEvents = { isOwner ? 'auto' : 'none' }
                 style = { styles.videoContainer as ViewStyle } >
-                {videoUrl.match(/http/)
-                    ? (
-                        <VideoManager
-                            height = { playerHeight }
-                            videoId = { videoUrl }
-                            width = { playerWidth } />
-                    ) : (
-                        <YoutubeVideoManager
-                            height = { playerHeight }
-                            videoId = { videoUrl }
-                            width = { playerWidth } />
-                    )
-                }
+                <VideoManager
+                    height = { playerHeight }
+                    videoId = { videoUrl }
+                    width = { playerWidth } />
             </View>
         );
     }

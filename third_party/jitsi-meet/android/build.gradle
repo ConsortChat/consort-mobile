@@ -27,9 +27,9 @@ buildscript {
         mavenPassword = System.env.MVN_PASSWORD ?: ""
 
         // Libre build
-        libreBuild = (System.env.LIBRE_BUILD ?: "false").toBoolean()
+        libreBuild = (System.env.LIBRE_BUILD ?: "true").toBoolean()  // Consort: libre by default
 
-        googleServicesEnabled = project.file('app/google-services.json').exists() && !libreBuild
+        googleServicesEnabled = false  // Consort: no Google services
 
         //React Native and Hermes Version
         rnVersion = "0.85.2"
@@ -48,8 +48,6 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$rootProject.ext.kotlinVersion"
         classpath "com.android.tools.build:gradle:$rootProject.ext.gradlePluginVersion"
         classpath "com.facebook.react:react-native-gradle-plugin:$rootProject.ext.rnVersion"
-        classpath 'com.google.gms:google-services:4.4.0'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
     }
 }
 
@@ -99,11 +97,6 @@ allprojects {
         }
     }
 
-    // Use the number of seconds/10 since Jan 1 2019 as the version qualifier number.
-    // This will last for the next ~680 years.
-    // https://stackoverflow.com/a/38643838
-    def versionQualifierNumber = (int)(((new Date().getTime()/1000) - 1546297200) / 10)
-
     afterEvaluate { project ->
         if (project.plugins.hasPlugin('android') || project.plugins.hasPlugin('android-library')) {
             project.android {
@@ -132,7 +125,8 @@ allprojects {
             // Release every dependency the SDK has with a -jitsi-XXX qualified version. This allows
             // us to pin the dependencies and make sure they are always updated, no matter what.
 
-            project.version = "${json.version}-jitsi-${versionQualifierNumber}"
+            // Consort: a fixed qualifier, for reproducible builds.
+            project.version = "${json.version}-consort"
 
             task jitsiAndroidSourcesJar(type: Jar) {
                 archiveClassifier = 'sources'

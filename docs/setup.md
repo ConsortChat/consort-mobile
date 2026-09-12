@@ -70,7 +70,9 @@ To set up the development environment on Linux without Android Studio:
    Use the Flutter `main` channel, just like in
    [our standard setup instructions][readme-setup].
 
-5. Build the app with `flutter build apk`
+5. Build the Jitsi Meet SDK with `tools/build-jitsi-sdk`
+   (this needs Node.js 24+).
+   Then build the app with `flutter build apk`
    or `flutter build apk --debug`, and
    download the resulting APK file to your local machine.
    Then use `adb install` (see `adb help` for help)

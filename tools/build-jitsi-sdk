@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat >&2 <<EOF
+usage: tools/build-jitsi-sdk
+
+Build the Jitsi Meet SDK for Android from the vendored source
+in third_party/jitsi-meet, and publish it and its React Native
+modules to the local Maven repository third_party/jitsi-sdk-maven,
+where packages/jitsi_meet_flutter_sdk finds them.
+
+Android builds of the app need this first.
+Rerun it after changing third_party/jitsi-meet.
+It needs Node.js 24+ and npm 11+, and downloads npm packages.
+
+Environment:
+  JITSI_MEET_DIR  Build from this jitsi-meet tree instead of the vendored one.
+                  (On Windows, a copy at a short path avoids path-length limits.)
+
+See third_party/jitsi-meet/README.consort.md.
+EOF
+    exit 2
+}
+
+if (( $# )); then usage; fi
+
+root_dir=$(cd "$(dirname "$0")/.." && pwd)
+jitsi_dir=${JITSI_MEET_DIR:-"${root_dir}"/third_party/jitsi-meet}
+maven_dir="${root_dir}"/third_party/jitsi-sdk-maven
+
+# Keep in sync with the dependency in packages/jitsi_meet_flutter_sdk/android/build.gradle.
+sdk_version="$(sed -n 's/^sdkVersion=//p' "${jitsi_dir}"/android/gradle.properties)-consort"
+
+# Print a path in the forms native Windows tools (npm, Gradle) expect,
+# if we're on Windows; else unchanged.
+native_path() {
+    if command -v cygpath >/dev/null; then cygpath -m "$1"; else echo "$1"; fi
+}
+
+cd "${jitsi_dir}"
+
+# jitsi-meet's npm scripts assume a POSIX shell, even on Windows.
+# The postinstall script also generates the React Native autolinking config.
+npm_config_script_shell=$(native_path "$(command -v bash)") \
+    npm ci --no-audit --no-fund
+
+rm -rf "${maven_dir}"
+mkdir -p "${maven_dir}"
+
+cd android
+export LIBRE_BUILD=true
+export MVN_REPO="file:///$(native_path "${maven_dir}" | sed 's|^/||')"
+export OVERRIDE_SDK_VERSION="${sdk_version}"
+./gradlew assembleRelease
+./gradlew publish
+
+echo "Published Jitsi Meet SDK ${sdk_version} to ${maven_dir}"

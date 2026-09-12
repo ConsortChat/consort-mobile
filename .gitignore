@@ -58,6 +58,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Built by tools/build-jitsi-sdk
+/third_party/jitsi-sdk-maven/
+
 # Old scaffolding hack
 lib/credential_fixture.dart
 

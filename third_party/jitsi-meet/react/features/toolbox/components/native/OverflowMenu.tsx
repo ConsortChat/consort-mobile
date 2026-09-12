@@ -13,12 +13,9 @@ import BreakoutRoomsButton
 import SharedDocumentButton from '../../../etherpad/components/SharedDocumentButton.native';
 import ReactionMenu from '../../../reactions/components/native/ReactionMenu';
 import { shouldDisplayReactionsButtons } from '../../../reactions/functions.any';
-import LiveStreamButton from '../../../recording/components/LiveStream/native/LiveStreamButton';
 import RecordButton from '../../../recording/components/Recording/native/RecordButton';
 import SecurityDialogButton
     from '../../../security/components/security-dialog/native/SecurityDialogButton';
-import SharedVideoButton from '../../../shared-video/components/native/SharedVideoButton';
-import { isSharedVideoEnabled } from '../../../shared-video/functions';
 import SpeakerStatsButton from '../../../speaker-stats/components/native/SpeakerStatsButton';
 import { isSpeakerStatsDisabled } from '../../../speaker-stats/functions';
 import ClosedCaptionButton from '../../../subtitles/components/native/ClosedCaptionButton';
@@ -50,11 +47,6 @@ interface IProps {
      * True if the overflow menu is currently visible, false otherwise.
      */
     _isOpen: boolean;
-
-    /**
-     * Whether the shared video is enabled or not.
-     */
-    _isSharedVideoEnabled: boolean;
 
     /**
      * Whether or not speaker stats is disable.
@@ -127,7 +119,6 @@ class OverflowMenu extends PureComponent<IProps, IState> {
         const {
             _isBreakoutRoomsSupported,
             _isSpeakerStatsDisabled,
-            _isSharedVideoEnabled,
             dispatch
         } = this.props;
 
@@ -161,12 +152,12 @@ class OverflowMenu extends PureComponent<IProps, IState> {
                 {/* @ts-ignore */}
                 <SecurityDialogButton { ...buttonProps } />
                 <RecordButton { ...buttonProps } />
-                <LiveStreamButton { ...buttonProps } />
+                {/* Consort: no live streaming (YouTube, via Google sign-in). */}
                 <LinkToSalesforceButton { ...buttonProps } />
                 <WhiteboardButton { ...buttonProps } />
                 {/* @ts-ignore */}
                 <Divider style = { styles.divider as ViewStyle } />
-                {_isSharedVideoEnabled && <SharedVideoButton { ...buttonProps } />}
+                {/* Consort: no Share video (YouTube). */}
                 { this._renderOverflowMenuButtons(topButtonProps) }
                 {!_isSpeakerStatsDisabled && <SpeakerStatsButton { ...buttonProps } />}
                 {_isBreakoutRoomsSupported && <BreakoutRoomsButton { ...buttonProps } />}
@@ -280,7 +271,6 @@ function _mapStateToProps(state: IReduxState) {
 
     return {
         _isBreakoutRoomsSupported: conference?.getBreakoutRooms()?.isSupported(),
-        _isSharedVideoEnabled: isSharedVideoEnabled(state),
         _isSpeakerStatsDisabled: isSpeakerStatsDisabled(state),
         _shouldDisplayReactionsButtons: shouldDisplayReactionsButtons(state)
     };

@@ -14,14 +14,19 @@ buildscript {
     }
 }
 
+// Consort: the Jitsi Meet SDK and its React Native modules come from our
+// build of the vendored source, not from Jitsi's Maven repository.
+// See third_party/jitsi-meet/README.consort.md.
+def jitsiSdkMaven = new File(rootProject.projectDir, '../third_party/jitsi-sdk-maven')
+if (!jitsiSdkMaven.isDirectory()) {
+    throw new GradleException("Missing ${jitsiSdkMaven}. Run tools/build-jitsi-sdk first.")
+}
+
 rootProject.allprojects {
     repositories {
-        maven {
-            url "https://github.com/jitsi/jitsi-maven-repository/raw/master/releases"
-        }
+        maven { url jitsiSdkMaven.toURI() }
         google()
         mavenCentral()
-        maven { url 'https://www.jitpack.io' }
     }
 }
 
@@ -79,7 +84,8 @@ configurations.all {
  
 dependencies {
     implementation ("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
-    implementation ("org.jitsi.react:jitsi-meet-sdk:13.1.1") {
+    // Consort: keep in sync with sdk_version in tools/build-jitsi-sdk.
+    implementation ("org.jitsi.react:jitsi-meet-sdk:13.1.1-consort") {
         transitive = true
     }
 }

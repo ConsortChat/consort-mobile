@@ -39,6 +39,13 @@ If you're reading this page for the first time, see the sections on
   ../mobile/tools/checkout-keystore
   ```
 
+* Build the Jitsi Meet SDK from its vendored source, if you haven't since
+  `third_party/jitsi-meet` last changed:
+
+  ```
+  tools/build-jitsi-sdk
+  ```
+
 * Build both an Android App Bundle (AAB) and an APK, signed:
 
   ```

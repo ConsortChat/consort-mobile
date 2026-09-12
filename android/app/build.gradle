@@ -90,6 +90,9 @@ android {
         warningsAsErrors = true
         baseline = file("lint-baseline.xml")
         disable += ['AndroidGradlePluginVersion']
+        // Timber's own lint check, which arrives with Timber through the Jitsi SDK.
+        // We use android.util.Log.
+        disable += ['LogNotTimber']
     }
 }
 

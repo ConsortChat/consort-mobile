@@ -39,6 +39,14 @@ jobs:
     - name: Download our dependencies (flutter pub get)
       run: flutter pub get
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 24
+
+    - name: Build the Jitsi Meet SDK from source
+      run: tools/build-jitsi-sdk
+
     - name: Run tools/check
       run: TERM=dumb tools/check --all --output ci android
 

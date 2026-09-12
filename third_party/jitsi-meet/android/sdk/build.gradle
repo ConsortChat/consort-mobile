@@ -111,8 +111,7 @@ dependencies {
     // webrtc uses `api` so consumers can access WebRTCModuleOptions.
     def rnApiModules = [':react-native-webrtc']
     def rnModuleExcludes = [
-        (':react-native-device-info')                 : ['com.google.firebase', 'com.google.android.gms', 'com.android.installreferrer'],
-        (':react-native-google-signin-google-signin') : ['com.google.android.gms', 'androidx']
+        (':react-native-device-info')                 : ['com.google.firebase', 'com.google.android.gms', 'com.android.installreferrer']
     ]
 
     // LIBRE_BUILD exclusions happen in settings.gradle.
@@ -158,7 +157,8 @@ android.libraryVariants.all { def variant ->
 
         // Set up inputs and outputs so gradle can cache the result
         def reactRoot = file("${projectDir}/../../")
-        inputs.files fileTree(dir: reactRoot, excludes: ["android/**", "ios/**"])
+        // Consort: also exclude Gradle's state, whose lock files Windows can't read.
+        inputs.files fileTree(dir: reactRoot, excludes: ["android/**", "ios/**", "**/.gradle/**"])
         outputs.dir jsBundleDir
         outputs.dir resourcesDir
 

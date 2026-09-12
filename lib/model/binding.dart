@@ -560,6 +560,11 @@ class LiveZulipBinding extends ZulipBinding {
         // Consort calls aren't system calls, so we don't need the integration.
         //   https://github.com/jitsi/jitsi-meet/issues/10695
         'call-integration.enabled': false,
+        // Both are YouTube, and live streaming needs Google sign-in.
+        // Our Android build of the SDK omits them anyway;
+        // these hide them on iOS, which uses Jitsi's build.
+        'live-streaming.enabled': false,
+        'video-share.enabled': false,
       },
     );
     _jitsiAudioMuted = false;

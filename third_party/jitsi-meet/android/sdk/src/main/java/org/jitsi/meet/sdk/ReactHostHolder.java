@@ -144,16 +144,6 @@ class ReactHostHolder {
             JitsiMeetLogger.d(TAG, "Not loading GiphyReactNativeSdkPackage");
         }
 
-        // RNGoogleSignInPackage
-        try {
-            Class<?> googlePackageClass = Class.forName("com.reactnativegooglesignin.RNGoogleSigninPackage");
-            Constructor<?> constructor = googlePackageClass.getConstructor();
-            packages.add((ReactPackage)constructor.newInstance());
-        } catch (Exception e) {
-            // Ignore any error, the module is not compiled when LIBRE_BUILD is enabled.
-            JitsiMeetLogger.d(TAG, "Not loading RNGoogleSignInPackage");
-        }
-
         return packages;
     }
 

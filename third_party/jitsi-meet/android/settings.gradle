@@ -1,6 +1,8 @@
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
+// Consort: ':app' is a stand-in for the Jitsi Meet app, which isn't vendored;
+// see app/build.gradle.
 include ':app', ':sdk'
 
 includeBuild('../node_modules/@react-native/gradle-plugin')
@@ -8,8 +10,7 @@ includeBuild('../node_modules/@react-native/gradle-plugin')
 // Non-free RN modules, excluded when LIBRE_BUILD is set.
 def libreExcludedModules = [
     '@amplitude/analytics-react-native',
-    '@giphy/react-native-sdk',
-    '@react-native-google-signin/google-signin'
+    '@giphy/react-native-sdk'
 ]
 
 // Autolinked RN module paths, consumed by sdk/build.gradle.
@@ -25,7 +26,8 @@ def json = new JsonSlurper().parseText(autolinkingJson.text)
 
 // Filtered here so the includes below and sdk/build.gradle's codegen agree.
 def autolinkingManifest = autolinkingJson
-if ((System.env.LIBRE_BUILD ?: 'false').toBoolean()) {
+// Consort: libre by default.
+if ((System.env.LIBRE_BUILD ?: 'true').toBoolean()) {
     // Fail loudly if the list above was patched away.
     if (libreExcludedModules.isEmpty()) {
         throw new IllegalStateException('LIBRE_BUILD is set but libreExcludedModules is empty.')

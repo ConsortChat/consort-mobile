@@ -26,8 +26,6 @@ import AddPeopleDialog
     from '../../../../../invite/components/add-people-dialog/native/AddPeopleDialog';
 // @ts-ignore
 import ParticipantsPane from '../../../../../participants-pane/components/native/ParticipantsPane';
-// @ts-ignore
-import StartLiveStreamDialog from '../../../../../recording/components/LiveStream/native/StartLiveStreamDialog';
 import RecordingTranscriptionDialog
 // @ts-ignore
     from '../../../../../recording/components/Recording/native/RecordingTranscriptionDialog';
@@ -54,7 +52,6 @@ import {
     conferenceScreenOptions,
     gifsMenuOptions,
     inviteScreenOptions,
-    liveStreamScreenOptions,
     lobbyNavigationContainerScreenOptions,
     navigationContainerTheme,
     participantsScreenOptions,
@@ -152,13 +149,6 @@ const ConferenceNavigationContainer = () => {
                     options = {{
                         ...recordingScreenOptions,
                         title: t('dialog.recordAndTranscribe')
-                    }} />
-                <ConferenceStack.Screen
-                    component = { StartLiveStreamDialog }
-                    name = { screen.conference.liveStream }
-                    options = {{
-                        ...liveStreamScreenOptions,
-                        title: t('liveStreaming.title')
                     }} />
                 <ConferenceStack.Screen
                     component = { SpeakerStats }
