@@ -39,9 +39,28 @@ public class JitsiVideoDecoderFactory implements VideoDecoderFactory {
      * Predicate to filter out the AV1 hardware decoder, as we've seen decoding issues with it.
      */
     private static final String GOOGLE_AV1_DECODER = "c2.google.av1";
+
+    /**
+     * Consort: Samsung Exynos hardware decoders, as found on Pixel (Tensor) and Samsung Exynos phones. On a
+     * Pixel 9 Pro XL, joining a call where a screen share was already running left the share black: the
+     * c2.exynos.vp8 or c2.exynos.vp9 decoder produced output, was released and re-initialised around the
+     * first frames, and the renderer never received a frame for the rest of the call. The same joins
+     * rendered every time when the share was decoded in software (AV1, which this factory already keeps
+     * off hardware).
+     */
+    private static final String[] EXYNOS_DECODER_PREFIXES = { "c2.exynos.", "OMX.Exynos." };
+
     private static final Predicate<MediaCodecInfo> hwCodecPredicate = arg -> {
+        final String name = arg.getName();
+
+        for (String prefix : EXYNOS_DECODER_PREFIXES) {
+            if (name.startsWith(prefix)) {
+                return false;
+            }
+        }
+
         // Filter out the Google AV1 codec.
-        return !arg.getName().startsWith(GOOGLE_AV1_DECODER);
+        return !name.startsWith(GOOGLE_AV1_DECODER);
     };
     private static final Predicate<MediaCodecInfo> swCodecPredicate = arg -> {
         // Noop, just making sure we can customize it easily if needed.

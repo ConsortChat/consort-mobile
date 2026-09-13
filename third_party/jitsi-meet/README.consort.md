@@ -68,6 +68,11 @@ Deletions aside, changes are marked with `Consort:` comments.
   qualifier instead of a timestamp, so builds are reproducible.
 - Exclude Gradle's state directories from the JS bundle task's inputs;
   on Windows, Gradle can't read its own lock files there.
+- Keep remote video off Samsung Exynos hardware decoders
+  (`JitsiVideoDecoderFactory.java`), so it is decoded in software
+  on Pixel and Samsung Exynos phones.
+  With them, a Pixel 9 Pro XL joining a call where a screen share
+  was already running showed the share as a black tile.
 
 ## Upgrading
 
