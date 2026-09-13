@@ -6,9 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import org.jitsi.meet.sdk.BroadcastEvent
 import org.jitsi.meet.sdk.JitsiMeetActivity
+import org.jitsi.meet.sdk.JitsiMeetActivityDelegate
 import android.app.KeyguardManager
 import android.view.WindowManager
 import android.os.Build
@@ -49,6 +51,40 @@ class WrapperJitsiMeetActivity : JitsiMeetActivity() {
 
         super.onCreate(savedInstanceState)
         registerForBroadcastMessages()
+        registerBackHandler()
+    }
+
+    // Consort: whether the SDK is done with the conference,
+    // so that finishing this activity won't leave it.
+    private var readyToClose = false
+
+    // Consort: with predictive back (targetSdk 36 on Android 16), Android no
+    // longer calls JitsiMeetActivity.onBackPressed, so the back gesture just
+    // finished this activity, leaving the call.  Hand it to the SDK's React
+    // Native back handling instead, which closes an open menu or screen, or
+    // else keeps the call going in picture-in-picture.
+    private fun registerBackHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                JitsiMeetActivityDelegate.onBackPressed()
+            }
+        })
+    }
+
+    override fun onReadyToClose() {
+        readyToClose = true
+        super.onReadyToClose()
+    }
+
+    // Consort: when nothing in the SDK handles a back press, it finishes this
+    // activity, which would leave the call.  Keep the call going instead,
+    // and return to the app.
+    override fun finish() {
+        if (!readyToClose) {
+            moveTaskToBack(true)
+            return
+        }
+        super.finish()
     }
 
     private fun showOnLockscreen() {
