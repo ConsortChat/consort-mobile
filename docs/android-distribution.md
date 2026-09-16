@@ -3,14 +3,14 @@
 Consort's Android app is built in two variants,
 as Gradle product flavors:
 
-| Variant | Distribution | Dart entrypoint | Android push transports |
-| --- | --- | --- | --- |
-| `play` | Google Play | `lib/main.dart` | Firebase Cloud Messaging (FCM), plus UnifiedPush |
-| `fdroid` | F-Droid | `lib/main_fdroid.dart` | UnifiedPush only |
+| Variant | Distribution | Application ID | Dart entrypoint | Android push transports |
+| --- | --- | --- | --- | --- |
+| `play` | Google Play | `chat.consort.mobile` | `lib/main.dart` | Firebase Cloud Messaging (FCM), plus UnifiedPush |
+| `fdroid` | F-Droid | `chat.consort.fdroid` | `lib/main_fdroid.dart` | UnifiedPush only |
 
-Both variants are releases of the same app and use the Android application ID
-`chat.consort.mobile`.
-They share the same version name and version code for a given release.
+The variants share the same version name and version code for a given release,
+but are separate Android apps;
+see [Package identity and signing](#package-identity-and-signing).
 
 iOS has no flavors; it builds from `lib/main.dart`, with FCM.
 
@@ -160,18 +160,29 @@ https://dl.google.com/android/maven2/com/android/tools/build/aapt2/ .
   It will need to pin the Flutter version,
   since this app tracks Flutter's `main` channel;
   see the `environment` section of `pubspec.yaml`.
-- Choose and document the signing arrangement; see below.
 
 ## Package identity and signing
 
-Using `chat.consort.mobile` for both variants gives Consort one canonical
-Android identity and prevents both variants from being installed side by side.
-Android accepts an update only when it is signed with the same key as the
-installed app.
-Before publishing either variant, choose and document the Play App Signing and
-F-Droid signing arrangement.
-If the stores use different signing keys, users must stay on one distribution
-channel or uninstall the app before switching, which removes local app data.
+The two variants are deliberately separate apps,
+and neither store's build updates the other's.
+The Play build is signed through Play App Signing,
+and the F-Droid build with F-Droid's own key.
+Because Android accepts an update only when it is signed
+with the same key as the installed app,
+a shared application ID would make installing one variant over the other
+fail with a signature conflict.
+Separate application IDs avoid that:
+a user switching stores installs the other app,
+logs in again, and uninstalls the old one.
+
+With both installed, each has its own accounts, settings, and push registration.
+Both handle the `zulip://login` redirect used for web-based login,
+so Android shows an app chooser there;
+choosing the other app fails that login attempt.
+
+`chat.consort.mobile` can't change once uploaded to Google Play,
+and changing `chat.consort.fdroid` after release
+would leave existing F-Droid users without updates.
 
 See the F-Droid
 [Inclusion Policy](https://f-droid.org/en/docs/Inclusion_Policy/)

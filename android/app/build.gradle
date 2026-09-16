@@ -81,6 +81,8 @@ android {
         }
         fdroid {
             dimension "distribution"
+            // A separate app from the Play build; see docs/android-distribution.md.
+            applicationId "chat.consort.fdroid"
         }
     }
 
