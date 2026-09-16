@@ -55,7 +55,6 @@ allprojects {
     repositories {
         mavenCentral()
         google()
-        maven { url 'https://www.jitpack.io' }
     }
 
     // Make sure we use the react-native version in node_modules and not the one
@@ -70,6 +69,10 @@ allprojects {
                     if (details.requested.name == 'react-android') {
                         details.useVersion rootProject.ext.rnVersion
                     }
+                }
+                // Consort: react-native-webrtc asks for `124.+`; pin it.
+                if (details.requested.group == 'org.jitsi' && details.requested.name == 'webrtc') {
+                    details.useVersion '124.0.0'
                 }
             }
         }

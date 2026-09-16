@@ -91,10 +91,63 @@ and again after changing that source;
 it needs Node.js 24+.
 See `third_party/jitsi-meet/README.consort.md`.
 
+## Dependency verification
+
+Gradle checks every dependency it downloads
+against SHA-256 checksums committed in
+`android/gradle/verification-metadata.xml` for the app, and
+`third_party/jitsi-meet/android/gradle/verification-metadata.xml`
+for the Jitsi SDK.
+A build fails if a dependency is missing from the file
+or doesn't match its checksum.
+The Gradle wrappers check the Gradle distribution
+against `distributionSha256Sum` the same way.
+
+The app trusts Flutter's engine artifacts (group `io.flutter`)
+without checksums:
+their versions already name a Flutter engine commit,
+and CI builds with the latest Flutter from its main channel,
+so their checksums would change with every Flutter commit.
+
+After a change that adds or upgrades Android dependencies,
+such as upgrading pub packages with Android code,
+record the new checksums:
+
+```
+tools/gradle --write-verification-metadata sha256 \
+  :app:lintPlayDebug :app:assemblePlayRelease :app:bundlePlayRelease \
+  -x :app:preFdroidReleaseBuild -x :app:preFdroidDebugBuild
+tools/build-jitsi-sdk --write-verification-metadata
+```
+
+and, in a checkout prepared with `tools/prepare-fdroid`:
+
+```
+tools/gradle --write-verification-metadata sha256 :app:assembleFdroidRelease
+```
+
+The `-x` options skip the checks that the F-Droid variant is free of
+Firebase, which fail in a checkout that still has it.
+Gradle runs those checks here although it doesn't when Flutter
+invokes the same build; they are checks, not build steps,
+and the F-Droid variant's dependencies get recorded either way.
+
+Gradle adds entries but doesn't remove old ones.
+Check each addition in the diff before committing:
+it should be a dependency the change was meant to bring in.
+
+Gradle records the AAPT2 build tool only for the platform it ran on,
+so both files list `com.android.tools.build:aapt2`
+for Linux, macOS and Windows.
+After an upgrade of the Android Gradle plugin changes that version,
+add the other platforms' jars by hand,
+with checksums of the jars under
+https://dl.google.com/android/maven2/com/android/tools/build/aapt2/ .
+
 ## Remaining work
 
 - Review the remaining prebuilt artifacts against F-Droid's policy.
-  They come from Maven Central:
+  They come from Maven Central, pinned by checksum:
   React Native (`com.facebook.react:react-android`), Hermes,
   and Jitsi's build of WebRTC (`org.jitsi:webrtc`).
 - Confirm on devices that the Play APK receives FCM notifications,

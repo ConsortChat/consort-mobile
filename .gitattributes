@@ -34,3 +34,8 @@ test/model/schemas/*.json -diff
 # Keep vendored source byte-for-byte as upstream has it
 # (in particular, its shell scripts keep LF line endings).
 third_party/** -text
+
+# Gradle writes these dependency checksums itself, with the line endings
+# of whichever platform it ran on.  Normalize them, so that regenerating
+# one on Windows doesn't rewrite every line.
+verification-metadata.xml text eol=lf

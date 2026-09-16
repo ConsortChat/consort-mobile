@@ -66,6 +66,13 @@ Deletions aside, changes are marked with `Consort:` comments.
   in the build; the stand-in has none of the app's code.
 - Version the published React Native modules with a fixed `-consort`
   qualifier instead of a timestamp, so builds are reproducible.
+- Pin `org.jitsi:webrtc` to 124.0.0;
+  `react-native-webrtc` asks for any `124.+`.
+  Drop the JitPack repository, which nothing uses.
+- Check Gradle dependencies against the checksums in
+  `android/gradle/verification-metadata.xml`,
+  and the Gradle distribution against `distributionSha256Sum`
+  in `android/gradle/wrapper/gradle-wrapper.properties`.
 - Exclude Gradle's state directories from the JS bundle task's inputs;
   on Windows, Gradle can't read its own lock files there.
 - Keep remote video off Samsung Exynos hardware decoders
@@ -83,3 +90,7 @@ Deletions aside, changes are marked with `Consort:` comments.
 3. Update the SDK version in `tools/build-jitsi-sdk` and
    `packages/jitsi_meet_flutter_sdk/android/build.gradle`,
    and upgrade `packages/jitsi_meet_flutter_sdk` to the matching release.
+4. Build with `tools/build-jitsi-sdk --write-verification-metadata`,
+   and review the checksums it adds to
+   `android/gradle/verification-metadata.xml`;
+   see "Dependency verification" in `docs/android-distribution.md`.
