@@ -1,0 +1,129 @@
+name: Build APKs
+
+# Builds installable Android artifacts for a tagged release, or on demand:
+# an APK and an app bundle for Google Play, and an APK for F-Droid.
+#
+# These are signed with the debug key, so they are for testing, not for
+# release.  Release builds are signed with the upload key, which isn't
+# available to CI; see docs/release.md.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jitsi-sdk:
+    name: "Jitsi Meet SDK"
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 24
+
+    # The build takes some 20 minutes, and its result depends only on
+    # the vendored source and the script that builds it.
+    - name: Cache the built SDK
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: third_party/jitsi-sdk-maven
+        key: jitsi-sdk-${{ hashFiles('third_party/jitsi-meet/**', 'tools/build-jitsi-sdk') }}
+
+    - name: Build the Jitsi Meet SDK from source
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: tools/build-jitsi-sdk
+
+    - name: Pass the SDK to the builds below
+      uses: actions/upload-artifact@v7
+      with:
+        name: jitsi-sdk-maven
+        path: third_party/jitsi-sdk-maven
+        retention-days: 1
+        if-no-files-found: error
+
+  play:
+    name: "Google Play APK and app bundle"
+    needs: jitsi-sdk
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Clone Flutter SDK
+      run: tools/ci/clone-flutter-sdk
+
+    - name: Download our dependencies (flutter pub get)
+      run: flutter pub get
+
+    - name: Get the Jitsi Meet SDK
+      uses: actions/download-artifact@v8
+      with:
+        name: jitsi-sdk-maven
+        path: third_party/jitsi-sdk-maven
+
+    - name: Build
+      run: |
+        flutter build apk --release --flavor play
+        flutter build appbundle --release --flavor play
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: consort-play
+        path: |
+          build/app/outputs/flutter-apk/app-play-release.apk
+          build/app/outputs/bundle/playRelease/app-play-release.aab
+        if-no-files-found: error
+
+  fdroid:
+    name: "F-Droid APK"
+    needs: jitsi-sdk
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Clone Flutter SDK
+      run: tools/ci/clone-flutter-sdk
+
+    - name: Get the Jitsi Meet SDK
+      uses: actions/download-artifact@v8
+      with:
+        name: jitsi-sdk-maven
+        path: third_party/jitsi-sdk-maven
+
+    - name: Remove Firebase from our dependencies
+      run: tools/prepare-fdroid
+
+    - name: Build
+      # This fails if the F-Droid variant depends on Firebase or
+      # Google Play services; see android/app/build.gradle.
+      run: flutter build apk --release --flavor fdroid -t lib/main_fdroid.dart
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: consort-fdroid
+        path: build/app/outputs/flutter-apk/app-fdroid-release.apk
+        if-no-files-found: error
